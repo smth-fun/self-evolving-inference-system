@@ -490,7 +490,7 @@
 <header class="topnav">
   <div class="topnav-inner">
     <a href="/self-evolving-inference-system/" class="topnav-brand">
-      <img src="figures/logo-icon.png" alt="">
+      <img src="assets/figures/logo-icon.png" alt="">
       <span>Self-Evolving Inference System</span>
     </a>
     <nav>
@@ -506,7 +506,7 @@
 <!-- ── Hero ── -->
 <section class="hero">
   <h1 class="sr-only">Self-Evolving Inference System</h1>
-  <img class="hero-logo" src="figures/logo-cropped.png" alt="Self-Evolving Inference System">
+  <img class="hero-logo" src="assets/figures/logo-cropped.png" alt="Self-Evolving Inference System">
   <p class="hero-headline">$100 of Claude doubles throughput</p>
   <p class="hero-sub">A minimal scaffold that lets an AI agent iteratively optimize an LLM inference engine. Over 10 trials, Claude evolved mini-sglang from 512 to 1,016 tok/s (+98%) on Qwen3-0.6B / RTX PRO 6000 Blackwell.</p>
 
@@ -526,6 +526,12 @@
     <span class="chip">RTX PRO 6000 Blackwell</span>
     <span class="chip">No human intervention</span>
   </div>
+
+  <div style="max-width: 800px; margin: 2.5rem auto 0; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border);">
+    <video autoplay loop muted controls playsinline style="width: 100%; display: block;">
+      <source src="assets/inference.mp4" type="video/mp4">
+    </video>
+  </div>
 </section>
 
 <!-- ── Results + Phases ── -->
@@ -534,7 +540,7 @@
   <h2 class="section-title">Throughput over 10 sequential trials</h2>
   <p class="section-desc">Each trial reads the prior session's notes, profiles the system, and decides what to try next &mdash; without human guidance.</p>
   <div class="chart-wrapper">
-    <img src="figures/post-2-evolve/image.png" alt="Throughput evolution across 10 trials, from 512 to 1,016 tok/s">
+    <img src="assets/figures/post-2-evolve/image.png" alt="Throughput evolution across 10 trials, from 512 to 1,016 tok/s">
     <p class="chart-caption">Decode throughput (tok/s) measured after each trial on Qwen3-0.6B / RTX PRO 6000 Blackwell.</p>
   </div>
 

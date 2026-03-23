@@ -545,7 +545,7 @@
 <header class="topnav">
   <div class="topnav-inner">
     <a href="/self-evolving-inference-system/" class="topnav-brand">
-      <img src="figures/logo-icon.png" alt="">
+      <img src="assets/figures/logo-icon.png" alt="">
       <span>Self-Evolving Inference System</span>
     </a>
     <nav>
@@ -588,7 +588,7 @@
 
       <h2 id="2-what-the-95-improvement-was-actually-made-of">2. What the 95% Improvement Was Actually Made Of</h2>
 <div class="figure-wrap">
-<img alt="Optimization taxonomy showing the breakdown of improvements" src="figures/post-1-kernel/optimization_taxonomy.svg">
+<img alt="Optimization taxonomy showing the breakdown of improvements" src="assets/figures/post-1-kernel/optimization_taxonomy.svg">
 </div>
 <p>The single most important insight: for memory-bandwidth-bound inference, <em>reducing the data you move</em> matters far more than <em>moving it more efficiently</em>. The agent spent 4 trials (1–4) improving bandwidth utilization from 58% to 68% of peak, gaining +164 tok/s. Then trial 5 halved the data with INT8, gaining +184 tok/s in one trial.</p>
 <aside>
@@ -602,7 +602,7 @@
 
       <h3 id="fused-rmsnorm-gemv-the-redundant-but-right-trade-off">Fused RMSNorm + GEMV: The "Redundant but Right" Trade-off</h3>
 <div class="figure-wrap">
-<img alt="Design diagram of fused RMSNorm + GEMV" src="figures/post-1-kernel/design_fused_rmsnorm_gemv.svg">
+<img alt="Design diagram of fused RMSNorm + GEMV" src="assets/figures/post-1-kernel/design_fused_rmsnorm_gemv.svg">
 </div>
 <p>The agent's most architecturally interesting decision was in how it fused the layer normalization into the matrix-vector multiply.</p>
 <p>The standard approach would be: compute the norm once, write the result to memory, then read it back for the GEMV. The agent chose a different path — every GEMV block (for example, the QKV projection launches 2,048 blocks at bs=1) independently reloads the input vector and recomputes the norm from scratch. That's 2,048&times; redundant compute for the normalization.</p>
@@ -741,7 +741,7 @@ def _fused_add_rmsnorm_gemv_int4_kernel(
 
       <h3 id="fused-qknorm-rope-kv-store-three-kernels-become-one">Fused QKNorm + RoPE + KV Store: Three Kernels Become One</h3>
 <div class="figure-wrap">
-<img alt="Design diagram of fused QKNorm + RoPE + KV Store" src="figures/post-1-kernel/design_fused_qknorm_rope_kv.svg">
+<img alt="Design diagram of fused QKNorm + RoPE + KV Store" src="assets/figures/post-1-kernel/design_fused_qknorm_rope_kv.svg">
 </div>
 <p>For each of the 28 transformer layers, the decode path originally launched three separate kernels: QK normalization, rotary position embedding (RoPE), and KV cache storage. The agent fused all three into a single kernel where each thread block handles one attention head. Q-head blocks apply norm + RoPE in-place. K-head blocks apply norm + RoPE, then write directly to the KV cache. V values pass through untouched.</p>
 <p>This is clean, correct, and fully parameterized — no hardcoded dimensions. It eliminates ~84 kernel launches per decode step (3 saved per layer &times; 28 layers). For a pipeline where total step time is under 1ms, that's meaningful.</p>
@@ -842,7 +842,7 @@ def _fused_qk_norm_rope_store_kernel(
 
       <h3 id="split-k-decode-attention-better-sm-utilization">Split-K Decode Attention: Better SM Utilization</h3>
 <div class="figure-wrap">
-<img alt="Design diagram of split-K decode attention" src="figures/post-1-kernel/design_splitk_attention.svg">
+<img alt="Design diagram of split-K decode attention" src="assets/figures/post-1-kernel/design_splitk_attention.svg">
 </div>
 <p>The agent's most ambitious kernel was a custom attention implementation replacing FlashInfer's decode path. The insight: for bs=1 with only 16 query heads, vanilla per-head attention launches only 16 thread blocks on a GPU with 132 SMs. Most of the GPU sits idle.</p>
 <p>The agent parallelized across both heads <em>and</em> sequence chunks (128-token blocks). This expands the grid from 16 blocks to 16 &times; 16 = 256, achieving much better SM occupancy. A second reduction kernel merges the partial results using the online softmax trick from the FlashAttention paper.</p>
@@ -1026,7 +1026,7 @@ def _reduce_attn_kernel(
 
       <h3 id="micro-benchmarks-sometimes-lie">Micro-Benchmarks Sometimes Lie</h3>
 <div class="figure-wrap">
-<img alt="Diagram showing micro-benchmark vs end-to-end discrepancies" src="figures/post-1-kernel/microbench_lie.svg">
+<img alt="Diagram showing micro-benchmark vs end-to-end discrepancies" src="assets/figures/post-1-kernel/microbench_lie.svg">
 </div>
 <p>Even though each trial starts with a profiling phase, but sometimes evidence found through custom-written micro-benchmarks do not lead to final end-to-end improvement. </p>
 <blockquote>

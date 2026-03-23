@@ -480,7 +480,7 @@
 <header class="topnav">
   <div class="topnav-inner">
     <a href="/self-evolving-inference-system/" class="topnav-brand">
-      <img src="figures/logo-icon.png" alt="">
+      <img src="assets/figures/logo-icon.png" alt="">
       <span>Self-Evolving Inference System</span>
     </a>
     <nav>
@@ -547,7 +547,7 @@
 
       <h3 id="three-phases">Three Phases</h3>
 <div class="figure-wrap">
-<img alt="Throughput evolution across 10 trials" src="figures/post-2-evolve/image.png">
+<img alt="Throughput evolution across 10 trials" src="assets/figures/post-2-evolve/image.png">
 </div>
 <p>The optimization trajectory divides into three phases, each driven by fundamentally different sources of improvement:</p>
 <p><strong>Phase 1: Kernel Fusion (512 &rarr; 676 tok/s, +32%).</strong> Trials 1–3 fused operations to reduce kernel launch overhead and improve memory bandwidth utilization. The gains came from reading the same data fewer times.</p>
@@ -576,7 +576,7 @@
       <h3 id="asymmetric-failure-memory">Asymmetric Failure Memory</h3>
 <p>We tracked whether failed approaches were repeated in later trials. The pattern is stark:</p>
 <div class="figure-wrap">
-<img alt="Failure spectrum showing catastrophic vs silent failures" src="figures/post-2-evolve/failure_spectrum.svg">
+<img alt="Failure spectrum showing catastrophic vs silent failures" src="assets/figures/post-2-evolve/failure_spectrum.svg">
 </div>
 <p>Catastrophic failures are never repeated. The -91% cooperative groups attempt in trial 6 permanently eliminated that direction — the agent never revisited it. The -33% fused reduce and -18% grid sync atomics were similarly one-and-done.</p>
 <p>But silent failures — approaches that produced results "within noise" — were retried repeatedly. <code>num_warps</code> tuning was attempted five times across different trials. <code>BLOCK_N</code> tuning was tried three times. CPU/scheduling optimizations were attempted seven times. Each time, the agent reasoned that perhaps the conditions had changed enough to make the approach work.</p>
