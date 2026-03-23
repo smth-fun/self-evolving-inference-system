@@ -10,7 +10,7 @@ The scaffold has four components:
 
 1. **Fresh sessions** — each trial is a new Claude Code session with no conversation history carried over. The agent starts clean every time.
 2. **Frozen benchmark** — `mini-sglang/benchmark/offline/bench_simple.py` is the single source of truth. The agent cannot modify it. This prevents the agent from gaming the metric.
-3. **Scalar signal** — the only optimization target is throughput (tokens/second). Correctness is enforced by exact output match under greedy decoding.
+3. **Scalar signal** — the only optimization target is throughput (tokens/second). Correctness is enforced by requiring output tokens to match the baseline. You are free to change the sampling configurations depending on your use case.
 4. **Shared `learning.md`** — the agent's memory between sessions. Each trial reads prior learnings, runs experiments, and appends what it discovered. Over time this file accumulates a growing "do NOT try" list alongside proven techniques.
 
 ## Results
