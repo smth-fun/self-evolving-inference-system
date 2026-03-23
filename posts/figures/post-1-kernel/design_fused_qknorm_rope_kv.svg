@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 450" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif">
+  <defs>
+    <style>
+      .subtitle { font-size: 11.5px; fill: #64748b; }
+      .label { font-size: 11px; fill: #1e293b; font-weight: 600; }
+      .detail { font-size: 10px; fill: #475569; }
+      .small { font-size: 9px; fill: #94a3b8; }
+      .code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 10px; }
+      .phase-label { font-size: 12px; font-weight: 700; }
+    </style>
+  </defs>
+
+  <rect width="820" height="450" fill="#fafbfc" rx="8"/>
+
+  <!-- Subtitle only -->
+  <text x="410" y="28" text-anchor="middle" class="subtitle">Eliminating ~84 kernel launches per decode step (3 per layer × 28 layers)</text>
+
+  <!-- TOP: Before -->
+  <text x="50" y="58" class="phase-label" fill="#dc2626">Before: 3 Separate Kernels per Layer</text>
+
+  <!-- Kernel 1 -->
+  <g transform="translate(50, 72)">
+    <rect x="0" y="0" width="210" height="70" rx="6" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.2"/>
+    <text x="10" y="18" class="label" fill="#dc2626">Kernel 1: QK Normalize</text>
+    <text x="10" y="34" class="detail">RMSNorm on Q and K heads</text>
+    <text x="10" y="48" class="code" fill="#94a3b8">q = rms_norm(q)</text>
+    <text x="10" y="60" class="code" fill="#94a3b8">k = rms_norm(k)</text>
+  </g>
+
+  <!-- Gap indicator between K1 and K2 -->
+  <g transform="translate(265, 92)">
+    <line x1="0" y1="15" x2="20" y2="15" stroke="#fca5a5" stroke-width="1.5" stroke-dasharray="3,2"/>
+    <text x="10" y="38" text-anchor="middle" class="small" fill="#dc2626">~5 μs</text>
+  </g>
+
+  <!-- Kernel 2 -->
+  <g transform="translate(290, 72)">
+    <rect x="0" y="0" width="210" height="70" rx="6" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.2"/>
+    <text x="10" y="18" class="label" fill="#dc2626">Kernel 2: RoPE</text>
+    <text x="10" y="34" class="detail">Apply rotary position embedding</text>
+    <text x="10" y="48" class="code" fill="#94a3b8">q = apply_rope(q, pos)</text>
+    <text x="10" y="60" class="code" fill="#94a3b8">k = apply_rope(k, pos)</text>
+  </g>
+
+  <!-- Gap indicator between K2 and K3 -->
+  <g transform="translate(505, 92)">
+    <line x1="0" y1="15" x2="20" y2="15" stroke="#fca5a5" stroke-width="1.5" stroke-dasharray="3,2"/>
+    <text x="10" y="38" text-anchor="middle" class="small" fill="#dc2626">~5 μs</text>
+  </g>
+
+  <!-- Kernel 3 -->
+  <g transform="translate(530, 72)">
+    <rect x="0" y="0" width="210" height="70" rx="6" fill="#fef2f2" stroke="#fca5a5" stroke-width="1.2"/>
+    <text x="10" y="18" class="label" fill="#dc2626">Kernel 3: KV Cache Store</text>
+    <text x="10" y="34" class="detail">Write K, V to paged cache</text>
+    <text x="10" y="48" class="code" fill="#94a3b8">kv_cache[layer][pos] = k, v</text>
+  </g>
+
+  <!-- Cost callout -->
+  <rect x="50" y="155" width="690" height="24" rx="4" fill="#fee2e2"/>
+  <text x="395" y="171" text-anchor="middle" class="detail" fill="#dc2626" font-weight="600">3 kernel launches × 28 layers = 84 launches → ~420 μs just in launch overhead at ~5 μs each</text>
+
+  <!-- Arrow -->
+  <text x="410" y="202" text-anchor="middle" font-size="20" fill="#16a34a">↓</text>
+
+  <!-- BOTTOM: After -->
+  <text x="50" y="228" class="phase-label" fill="#16a34a">After: Single Fused Kernel per Layer</text>
+
+  <rect x="50" y="238" width="720" height="150" rx="8" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5"/>
+
+  <!-- Q-head blocks -->
+  <g transform="translate(70, 255)">
+    <text x="0" y="0" class="label" fill="#166534">Q-head blocks (16 heads)</text>
+    <rect x="0" y="8" width="310" height="55" rx="5" fill="#dcfce7" stroke="#86efac" stroke-width="1"/>
+    <text x="15" y="28" class="code" fill="#166534">1. RMSNorm on Q head</text>
+    <text x="15" y="42" class="code" fill="#166534">2. Apply RoPE (in-place)</text>
+    <text x="15" y="56" class="code" fill="#166534">3. Write Q to output  ✓</text>
+  </g>
+
+  <!-- K-head blocks -->
+  <g transform="translate(420, 255)">
+    <text x="0" y="0" class="label" fill="#166534">K-head blocks (8 GQA heads)</text>
+    <rect x="0" y="8" width="330" height="55" rx="5" fill="#dcfce7" stroke="#86efac" stroke-width="1"/>
+    <text x="15" y="28" class="code" fill="#166534">1. RMSNorm on K head</text>
+    <text x="15" y="42" class="code" fill="#166534">2. Apply RoPE (in-place)</text>
+    <text x="15" y="56" class="code" fill="#166534">3. Write K directly to KV cache  ✓</text>
+  </g>
+
+  <!-- V-head blocks -->
+  <g transform="translate(420, 330)">
+    <text x="0" y="0" class="label" fill="#166534">V-head blocks (8 GQA heads)</text>
+    <rect x="0" y="8" width="330" height="30" rx="5" fill="#dcfce7" stroke="#86efac" stroke-width="1"/>
+    <text x="15" y="28" class="code" fill="#166534">Pass-through → write V directly to KV cache  ✓</text>
+  </g>
+
+  <rect x="70" y="338" width="310" height="30" rx="5" fill="#bbf7d0"/>
+  <text x="225" y="358" text-anchor="middle" class="detail" fill="#166534" font-weight="600">One block per head — fully parameterized, no hardcoded dims</text>
+
+  <!-- Cost callout -->
+  <rect x="50" y="398" width="720" height="40" rx="6" fill="#fff" stroke="#86efac" stroke-width="1.2"/>
+  <text x="410" y="416" text-anchor="middle" class="label" fill="#16a34a">1 kernel launch × 28 layers = 28 launches → saves 56 launches/step</text>
+  <text x="410" y="432" text-anchor="middle" class="detail" fill="#166534">At sub-1ms decode latency, eliminating ~280 μs of launch overhead is a significant win</text>
+</svg>

@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif">
+  <defs>
+    <style>
+      .title { font-size: 15px; fill: #1e293b; font-weight: 600; }
+      .subtitle { font-size: 11px; fill: #64748b; }
+      .col-header { font-size: 11px; fill: #1e293b; font-weight: 600; }
+      .opt-name { font-size: 10.5px; fill: #1e293b; font-weight: 500; }
+      .trial-tag { font-size: 9px; fill: #64748b; }
+      .bar-val { font-size: 10px; font-weight: 600; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="400" fill="#fafbfc" rx="8"/>
+
+  <!-- Title -->
+  <text x="400" y="28" text-anchor="middle" class="title">Micro-Benchmarks Lie: Isolated Gains Vanish End-to-End</text>
+  <text x="400" y="46" text-anchor="middle" class="subtitle">4 optimizations that looked great in isolation but delivered nothing (or worse) in the full system</text>
+
+  <!-- Column headers -->
+  <text x="310" y="76" text-anchor="middle" class="col-header" fill="#22c55e">Micro-benchmark</text>
+  <text x="580" y="76" text-anchor="middle" class="col-header" fill="#64748b">End-to-end result</text>
+
+  <!-- Center divider -->
+  <line x1="440" y1="65" x2="440" y2="310" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <!-- Row 1: BLOCK_N=8 for fused INT8 -->
+  <g transform="translate(0, 90)">
+    <text x="40" y="14" class="opt-name">BLOCK_N=8 for fused INT8</text>
+    <text x="40" y="28" class="trial-tag">Trial 8</text>
+    <!-- Micro bar: +17% -->
+    <rect x="180" y="5" width="221" height="20" rx="4" fill="#bbf7d0"/>
+    <rect x="180" y="5" width="221" height="20" rx="4" fill="#22c55e" opacity="0.7"/>
+    <text x="408" y="19" class="bar-val" fill="#16a34a" text-anchor="start"> +17%</text>
+    <!-- E2E bar: -3% -->
+    <rect x="460" y="5" width="39" height="20" rx="4" fill="#fecaca"/>
+    <rect x="460" y="5" width="39" height="20" rx="4" fill="#ef4444" opacity="0.5"/>
+    <text x="506" y="19" class="bar-val" fill="#dc2626" text-anchor="start"> -3%</text>
+  </g>
+
+  <!-- Row 2: FlashAttention-3 -->
+  <g transform="translate(0, 145)">
+    <text x="40" y="14" class="opt-name">FlashAttention-3 backend</text>
+    <text x="40" y="28" class="trial-tag">Trial 3</text>
+    <!-- Micro bar: +15% -->
+    <rect x="180" y="5" width="195" height="20" rx="4" fill="#22c55e" opacity="0.7"/>
+    <text x="382" y="19" class="bar-val" fill="#16a34a" text-anchor="start"> +15%</text>
+    <!-- E2E bar: ~0% -->
+    <rect x="460" y="5" width="4" height="20" rx="2" fill="#94a3b8"/>
+    <text x="472" y="19" class="bar-val" fill="#64748b" text-anchor="start"> ~0%</text>
+  </g>
+
+  <!-- Row 3: num_warps=1 for GEMV -->
+  <g transform="translate(0, 200)">
+    <text x="40" y="14" class="opt-name">num_warps=1 for GEMV</text>
+    <text x="40" y="28" class="trial-tag">Trial 3</text>
+    <!-- Micro bar: +4.3% -->
+    <rect x="180" y="5" width="56" height="20" rx="4" fill="#22c55e" opacity="0.7"/>
+    <text x="243" y="19" class="bar-val" fill="#16a34a" text-anchor="start"> +4.3%</text>
+    <!-- E2E bar: ~0% -->
+    <rect x="460" y="5" width="4" height="20" rx="2" fill="#94a3b8"/>
+    <text x="472" y="19" class="bar-val" fill="#64748b" text-anchor="start"> ~0%</text>
+  </g>
+
+  <!-- Row 4: INT8 small matrices -->
+  <g transform="translate(0, 255)">
+    <text x="40" y="14" class="opt-name">INT8 for small matrices</text>
+    <text x="40" y="28" class="trial-tag">Trial 5</text>
+    <!-- Micro bar: -18% (SLOWER in micro!) -->
+    <rect x="180" y="5" width="104" height="20" rx="4" fill="#ef4444" opacity="0.5"/>
+    <text x="291" y="19" class="bar-val" fill="#dc2626" text-anchor="start"> -18%</text>
+    <!-- E2E bar: +15% (faster in full system!) -->
+    <rect x="460" y="5" width="195" height="20" rx="4" fill="#22c55e" opacity="0.7"/>
+    <text x="662" y="19" class="bar-val" fill="#16a34a" text-anchor="start"> +15%</text>
+  </g>
+
+  <!-- Row 4 callout -->
+  <rect x="460" y="280" width="290" height="18" rx="3" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="468" y="293" font-size="9" fill="#16a34a" font-weight="500">&#8593; Micro said slower, CUDA graph made it faster!</text>
+
+  <!-- Bottom insight box -->
+  <rect x="60" y="320" width="680" height="60" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="80" y="342" font-size="12" fill="#1e293b" font-weight="600">Why this happens:</text>
+  <text x="80" y="360" font-size="10.5" fill="#475569">Inside a CUDA graph, kernels share L2 cache, compete for bandwidth, and have different scheduling</text>
+  <text x="80" y="375" font-size="10.5" fill="#475569">patterns than in isolation. An improvement to one kernel can hurt adjacent kernels via cache pressure.</text>
+</svg>
