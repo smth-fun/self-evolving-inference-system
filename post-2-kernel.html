@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Self-Evolving Inference: When AI Agents Write GPU Kernels</title>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c1221;
+    --bg-surface: #111827;
+    --bg-card: #151d2e;
+    --fg: #e2e8f0;
+    --fg-muted: #94a3b8;
+    --fg-dim: #64748b;
+    --accent: #38bdf8;
+    --accent-glow: rgba(56, 189, 248, 0.15);
+    --accent-border: rgba(56, 189, 248, 0.25);
+    --accent-2: #f59e0b;
+    --border: rgba(148, 163, 184, 0.12);
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+    --font-heading: 'Space Grotesk', system-ui, sans-serif;
+    --font-body: 'Inter', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+    --content-w: 720px;
+    --wide-w: 960px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.8;
+    font-size: 18px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Sticky Nav ── */
+  .topnav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(12, 18, 33, 0.82);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+  }
+  .topnav-inner {
+    max-width: 1060px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+  }
+  .topnav-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    text-decoration: none;
+    color: var(--fg);
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 0.95rem;
+    letter-spacing: -0.01em;
+  }
+  .topnav-brand img {
+    height: 28px;
+    width: auto;
+  }
+  .topnav-links {
+    display: flex;
+    align-items: center;
+    gap: 1.75rem;
+    list-style: none;
+  }
+  .topnav-links a {
+    color: var(--fg-muted);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+  .topnav-links a:hover { color: var(--accent); }
+
+  /* ── Article Layout ── */
+  .article-wrapper {
+    max-width: var(--content-w);
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  .article-header {
+    padding-top: 3.5rem;
+    padding-bottom: 2rem;
+  }
+
+  .article-header h1 {
+    font-family: var(--font-heading);
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.2;
+    letter-spacing: -0.03em;
+    margin-bottom: 1.75rem;
+  }
+
+  /* ── Summary Card ── */
+  .summary-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.75rem 2rem;
+    margin-bottom: 1.5rem;
+  }
+  .summary-card p {
+    color: var(--fg-muted);
+    font-size: 1.05rem;
+    line-height: 1.75;
+    margin: 0;
+  }
+
+  /* ── Key Number Chips ── */
+  .key-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-bottom: 2.5rem;
+  }
+  .key-chip {
+    display: inline-block;
+    padding: 0.3rem 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--fg-muted);
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    white-space: nowrap;
+  }
+  .key-chip--accent {
+    color: var(--accent);
+    border-color: var(--accent-border);
+    background: var(--accent-glow);
+  }
+
+  /* ── Article Body ── */
+  .article-body {
+    padding-bottom: 4rem;
+  }
+
+  .article-body h2 {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #fff;
+    margin-top: 3.5rem;
+    margin-bottom: 1rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+    letter-spacing: -0.02em;
+  }
+
+  .article-body h3 {
+    font-family: var(--font-heading);
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin-top: 2.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .article-body p {
+    margin-bottom: 1.25rem;
+  }
+
+  .article-body strong {
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .article-body a {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: rgba(56, 189, 248, 0.4);
+    transition: text-decoration-color 0.2s, color 0.2s;
+  }
+  .article-body a:hover {
+    color: #7dd3fc;
+    text-decoration-color: var(--accent);
+  }
+
+  .article-body em {
+    font-style: italic;
+  }
+
+  /* ── Inline Code ── */
+  .article-body code {
+    background: rgba(56, 189, 248, 0.08);
+    color: #7dd3fc;
+    border: 1px solid rgba(56, 189, 248, 0.15);
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    padding: 0.15em 0.45em;
+    border-radius: 5px;
+  }
+
+  /* ── Code Blocks ── */
+  .article-body pre {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    border-radius: 10px;
+    overflow-x: auto;
+    margin: 1.5rem 0;
+    max-width: var(--wide-w);
+    margin-left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+  }
+  .article-body pre code {
+    background: none;
+    color: #c9d1d9;
+    border: none;
+    padding: 0;
+    font-size: 0.85em;
+    line-height: 1.65;
+    font-family: var(--font-mono);
+  }
+
+  /* ── Blockquotes ── */
+  .article-body blockquote {
+    background: rgba(56, 189, 248, 0.05);
+    border-left: 3px solid var(--accent);
+    padding: 1.25rem 1.5rem;
+    border-radius: 0 8px 8px 0;
+    margin: 1.5rem 0;
+    max-width: var(--wide-w);
+    margin-left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+  }
+  .article-body blockquote p {
+    color: var(--fg-muted);
+    margin-bottom: 0.75rem;
+  }
+  .article-body blockquote p:last-child {
+    margin-bottom: 0;
+  }
+
+  /* ── Images / Figures ── */
+  .article-body .figure-wrap {
+    max-width: var(--wide-w);
+    margin: 2rem auto;
+    margin-left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+  }
+  .article-body .figure-wrap img {
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    display: block;
+  }
+  .article-body img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 10px;
+    margin: 1.5rem 0;
+    display: block;
+  }
+
+  /* ── Lists ── */
+  .article-body ul,
+  .article-body ol {
+    margin: 0.75rem 0 1.5rem 1.5rem;
+    color: var(--fg);
+  }
+  .article-body li {
+    margin-bottom: 0.5rem;
+    line-height: 1.75;
+  }
+  .article-body li::marker {
+    color: var(--fg-dim);
+  }
+
+  /* ── Tables ── */
+  .table-wrap {
+    max-width: var(--wide-w);
+    margin: 1.5rem auto;
+    margin-left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .article-body table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92em;
+  }
+  .article-body th {
+    background: var(--bg-surface);
+    font-weight: 600;
+    color: #fff;
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .article-body td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .article-body tr:nth-child(even) td {
+    background: rgba(148, 163, 184, 0.04);
+  }
+  .article-body tr:last-child td {
+    border-bottom: none;
+  }
+
+  /* ── Aside / Callout ── */
+  .article-body aside {
+    background: var(--bg-surface);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 1.25rem 1.5rem;
+    margin: 1.5rem 0;
+    max-width: var(--wide-w);
+    margin-left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    color: var(--fg-muted);
+    font-size: 0.95rem;
+    line-height: 1.7;
+  }
+  .article-body aside strong {
+    color: #fff;
+  }
+
+  /* ── HR ── */
+  .article-body hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2.5rem 0;
+  }
+
+  /* ── Sticky TOC (desktop) ── */
+  .toc-sidebar {
+    position: fixed;
+    left: max(1.5rem, calc((100vw - var(--wide-w)) / 2 - 260px));
+    top: 80px;
+    width: 220px;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    z-index: 50;
+  }
+  .toc-sidebar h4 {
+    font-family: var(--font-heading);
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--fg-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.75rem;
+  }
+  .toc-sidebar a {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--fg-dim);
+    text-decoration: none;
+    padding: 0.3rem 0;
+    padding-left: 0.75rem;
+    border-left: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+    line-height: 1.45;
+  }
+  .toc-sidebar a:hover {
+    color: var(--fg-muted);
+  }
+  .toc-sidebar a.active {
+    color: var(--accent);
+    border-left-color: var(--accent);
+  }
+  @media (max-width: 1300px) {
+    .toc-sidebar { display: none; }
+  }
+
+  /* ── Footer ── */
+  .site-footer {
+    border-top: 1px solid var(--border);
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+  }
+  .footer-inner {
+    max-width: 1060px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+  .footer-credit {
+    font-size: 0.875rem;
+    color: var(--fg-dim);
+    max-width: 560px;
+    line-height: 1.65;
+  }
+  .footer-credit a {
+    color: var(--fg-muted);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .footer-credit a:hover { color: var(--accent); }
+  .footer-links {
+    display: flex;
+    gap: 1.5rem;
+    list-style: none;
+  }
+  .footer-links a {
+    color: var(--fg-dim);
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+  .footer-links a:hover { color: var(--accent); }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    body { font-size: 16px; }
+    .article-header h1 { font-size: 1.75rem; }
+    .article-body h2 { font-size: 1.3rem; }
+    .article-body h3 { font-size: 1.1rem; }
+    .article-body pre,
+    .article-body blockquote,
+    .article-body aside,
+    .article-body .figure-wrap,
+    .table-wrap {
+      max-width: 100%;
+      width: 100%;
+      margin-left: 0;
+      transform: none;
+    }
+    .summary-card { padding: 1.25rem; }
+    .topnav-brand span { display: none; }
+    .topnav-links { gap: 1rem; }
+    .topnav-links a { font-size: 0.8rem; }
+    .article-header { padding-top: 2.5rem; }
+  }
+  @media (max-width: 480px) {
+    .article-header h1 { font-size: 1.5rem; }
+    .key-chips { gap: 0.4rem; }
+    .key-chip { font-size: 0.7rem; padding: 0.25rem 0.6rem; }
+    .topnav-links { gap: 0.75rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Sticky Nav ── -->
+<header class="topnav">
+  <div class="topnav-inner">
+    <a href="/self-evolving-inference-system/" class="topnav-brand">
+      <img src="figures/logo-icon.png" alt="">
+      <span>Self-Evolving Inference System</span>
+    </a>
+    <nav>
+      <ul class="topnav-links">
+        <li><a href="/self-evolving-inference-system/">Home</a></li>
+        <li><a href="/self-evolving-inference-system/post-1-evolve.html">Post 1</a></li>
+        <li><a href="https://github.com/smth-fun/self-evolving-inference-system">GitHub</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<!-- ── TOC Sidebar ── -->
+<nav class="toc-sidebar" id="toc"></nav>
+
+<!-- ── Article ── -->
+<article>
+  <div class="article-wrapper">
+    <header class="article-header">
+      <h1>Self-Evolving Inference: When AI Agents Write GPU Kernels</h1>
+
+      <div class="summary-card">
+        <p>A deep dive into what happens when you let Claude evolve on a real inference engine: the breakthroughs, the bugs, and the lessons that surprised us.</p>
+      </div>
+
+      <div class="key-chips">
+        <span class="key-chip">3,700 Lines</span>
+        <span class="key-chip">26 Files Changed</span>
+        <span class="key-chip key-chip--accent">8 Optimizations</span>
+        <span class="key-chip">3 Bugs Found</span>
+        <span class="key-chip">~1,200 Dead Lines</span>
+      </div>
+    </header>
+
+    <div class="article-body">
+      <h2 id="1-introduction-vision">1. Introduction &amp; Vision</h2>
+<p>We gave Claude a simple task: make this inference engine faster. The target was link, a lightweight LLM serving engine, running Qwen3-0.6B on an NVIDIA RTX PRO 6000 Blackwell GPU at batch size 1. The baseline is 512 tok/s. </p>
+<p>Over 10 sequential trials, Claude wrote 3,700 lines of Triton and CUDA code, fused kernels, introduced INT8/INT4 quantization, redesigned the attention mechanism, and pushed throughput to 1,016 tok/s, nearly doubles the original performance and leaves SGLang and TensorRT-LLM far behind on this workload. No human wrote or suggested any of the optimization strategies.</p>
+<p>This article is what came out of reading the resulting code for all trials. We open the hood on 26 changed files and ask these questions: <em>Is the code correct? Is it clever or just complicated? What are the bugs?</em> We found 8 genuinely impressive optimizations, 1 silent correctness bug, 2 race conditions, and ~1,200 lines of dead code the agent never cleaned up. What follows below is our analysis.</p>
+
+      <h2 id="2-what-the-95-improvement-was-actually-made-of">2. What the 95% Improvement Was Actually Made Of</h2>
+<div class="figure-wrap">
+<img alt="Optimization taxonomy showing the breakdown of improvements" src="figures/post-1-kernel/optimization_taxonomy.svg">
+</div>
+<p>The single most important insight: for memory-bandwidth-bound inference, <em>reducing the data you move</em> matters far more than <em>moving it more efficiently</em>. The agent spent 4 trials (1–4) improving bandwidth utilization from 58% to 68% of peak, gaining +164 tok/s. Then trial 5 halved the data with INT8, gaining +184 tok/s in one trial.</p>
+<aside>
+&#x1F4A1;
+
+<strong>Gain Composition:</strong> Kernel fusion was the reliable workhorse (58% success rate, moderate gains). Parameter tuning was mostly wasted effort (20% success rate). CPU optimizations were 0-for-7 because the system was GPU-boun
+
+</aside>
+
+      <h2 id="3-what-the-agent-built-well">3. What the Agent Built Well</h2>
+
+      <h3 id="fused-rmsnorm-gemv-the-redundant-but-right-trade-off">Fused RMSNorm + GEMV: The "Redundant but Right" Trade-off</h3>
+<div class="figure-wrap">
+<img alt="Design diagram of fused RMSNorm + GEMV" src="figures/post-1-kernel/design_fused_rmsnorm_gemv.svg">
+</div>
+<p>The agent's most architecturally interesting decision was in how it fused the layer normalization into the matrix-vector multiply.</p>
+<p>The standard approach would be: compute the norm once, write the result to memory, then read it back for the GEMV. The agent chose a different path — every GEMV block (for example, the QKV projection launches 2,048 blocks at bs=1) independently reloads the input vector and recomputes the norm from scratch. That's 2,048&times; redundant compute for the normalization.</p>
+<p>Why is this actually smart? Because the alternative — computing the norm once and synchronizing across blocks — would require either an inter-block barrier (which CUDA doesn't natively support within a single kernel) or a two-phase kernel (which adds a kernel launch). For a 1024-element vector, each block's redundant norm costs ~2 microseconds of compute, but it saves ~5-10 microseconds of launch overhead and memory round-trips. The agent found the counterintuitive answer: <em>doing the same work 500 times is faster than doing it once and sharing.</em></p>
+<p>What's especially notable is that by Trial 8, the agent had learned to evolve this further. The INT4 variant (<code>fused_norm_gemv_int4.py</code>) uses a two-phase design — compute the norm once in Phase 1, then loop over weight groups in Phase 2. The agent discovered that the redundant-norm trick works for bf16 weights (small enough to fit in one tile) but breaks down for INT4 (where the group-loop structure makes redundant loading too expensive). It adapted its own pattern.</p>
+<p><strong>Transferability: Fully general.</strong> Works for any model. The constraint itself is not fundamental — <code>BLOCK_M</code> could be parameterized as <code>next_power_of_2(hidden_size)</code> — but the current implementation hardcodes <code>BLOCK_M = 1024</code>.</p>
+
+      <h3 id="fused-qknorm-rope-kv-store-three-kernels-become-one">Fused QKNorm + RoPE + KV Store: Three Kernels Become One</h3>
+<div class="figure-wrap">
+<img alt="Design diagram of fused QKNorm + RoPE + KV Store" src="figures/post-1-kernel/design_fused_qknorm_rope_kv.svg">
+</div>
+<p>For each of the 28 transformer layers, the decode path originally launched three separate kernels: QK normalization, rotary position embedding (RoPE), and KV cache storage. The agent fused all three into a single kernel where each thread block handles one attention head. Q-head blocks apply norm + RoPE in-place. K-head blocks apply norm + RoPE, then write directly to the KV cache. V values pass through untouched.</p>
+<p>This is clean, correct, and fully parameterized — no hardcoded dimensions. It eliminates ~84 kernel launches per decode step (3 saved per layer &times; 28 layers). For a pipeline where total step time is under 1ms, that's meaningful.</p>
+<p><strong>Transferability: Fully general</strong> for any GQA model with RoPE and QKNorm.</p>
+
+      <h3 id="split-k-decode-attention-better-sm-utilization">Split-K Decode Attention: Better SM Utilization</h3>
+<div class="figure-wrap">
+<img alt="Design diagram of split-K decode attention" src="figures/post-1-kernel/design_splitk_attention.svg">
+</div>
+<p>The agent's most ambitious kernel was a custom attention implementation replacing FlashInfer's decode path. The insight: for bs=1 with only 16 query heads, vanilla per-head attention launches only 16 thread blocks on a GPU with 132 SMs. Most of the GPU sits idle.</p>
+<p>The agent parallelized across both heads <em>and</em> sequence chunks (128-token blocks). This expands the grid from 16 blocks to 16 &times; 16 = 256, achieving much better SM occupancy. A second reduction kernel merges the partial results using the online softmax trick from the FlashAttention paper.</p>
+<p>The algorithm is textbook split-K attention. The implementation is clean.</p>
+<p><strong>Transferability: Algorithm is fully general.</strong> But the implementation has a critical bug (see below).</p>
+
+      <h3 id="other-good-ideas-quick-hits">Other Good Ideas (Quick Hits)</h3>
+<ul>
+<li><strong>In-graph argmax:</strong> Capturing <code>torch.argmax</code> inside the CUDA graph for greedy decode eliminates one kernel launch per step. This is a simple, correct, clean, and general fallback for non-greedy sampling.</li>
+<li><strong>Pre-allocated decode metadata:</strong> Reuses pinned CPU tensors instead of allocating new ones every step. Saves ~30-60&micro;s of Python allocation overhead per step. General.</li>
+<li><strong><code>skip_store</code> API extension:</strong> A clean backward-compatible flag on all attention backends that enables fused KV preparation without double-storing. Good interface design. General.</li>
+<li><strong>INT8/INT4 weight quantization:</strong> Standard per-row (INT8) and per-group (INT4, group_size=128) symmetric quantization. Reduces GEMV memory traffic by 2-4x. The packing and unpacking logic is correct. General.</li>
+<li><strong>Multi-step CUDA graph:</strong> Captures 4 sequential decode forward passes in a single graph replay. Amortizes graph launch overhead across 4 tokens. Innovative, but fragile (any model change silently breaks the captured graph). General concept, specific implementation.</li>
+</ul>
+
+      <h2 id="4-what-the-agent-got-wrong">4. What the Agent Got Wrong</h2>
+
+      <h3 id="the-silent-2048-token-cliff">The Silent 2048-Token Cliff</h3>
+<p>The split-K attention kernel hardcodes <code>_NUM_CHUNKS_PAD = 16</code> and <code>_BLOCK_SEQ = 128</code>, meaning it can attend to at most 128 &times; 16 = 2,048 tokens. If the sequence is longer, chunks beyond index 15 are simply never computed. No assertion. No error. No warning. The kernel just silently ignores those tokens and produces wrong attention outputs.</p>
+<p>The benchmark happens to stay under this limit (short prompts + 128 output tokens), so the agent never encountered the bug during its optimization loop. But <code>max_seq_len</code> is set to 4,096. Any real workload generating more than ~1,000 output tokens would hit this wall.</p>
+<p>This is the canonical example of <strong>reward hacking through benchmarks</strong>: the agent optimized for the benchmark it could measure, and the benchmark didn't test the edge case. The optimization is "correct" on the benchmark and silently broken in production.</p>
+<p><strong>Fix:</strong> Make <code>_NUM_CHUNKS_PAD</code> dynamic, derived from <code>max_seq_len</code> at initialization.</p>
+
+      <h3 id="two-race-conditions-in-the-mega-fused-kernel">Two Race Conditions in the Mega-Fused Kernel</h3>
+<p>The agent's most ambitious kernel — <code>fused_qknorm_attn.py</code>, which fuses QKNorm + RoPE + KV Store + Split-K Attention + Reduction into a single launch — contains two race conditions:</p>
+<p><strong>Race 1: Q Scratch Buffer.</strong> All 16 chunk-blocks for the same query head write their (identically computed) normalized Q values to the same global memory location. Then all 16 blocks read from that location for attention. There's no barrier between the writes and reads. While the values are identical, concurrent reads-during-writes across thread blocks are undefined behavior in CUDA. This could cause bit-level corruption in attention scores on some hardware.</p>
+<p><strong>Race 2: KV Cache Store (GQA).</strong> With grouped-query attention (GQA ratio = 2 for Qwen3-0.6B), two query-head blocks share one KV head. Both attempt to write K/V to the same cache location. Same issue — identical data, no synchronization, technically undefined.</p>
+<p>Neither race is <em>likely</em> to cause visible errors on current NVIDIA hardware (same-value WAW races are practically benign on A100/H100). But they're the kind of thing that breaks silently when you move to a new GPU architecture or when the compiler decides to optimize differently.</p>
+<p><strong>Fixes:</strong> For Race 1, compute Q in registers per-block instead of sharing via global scratch. For Race 2, guard the KV store with <code>qo_head % GQA_RATIO == 0</code>.</p>
+
+      <h3 id="the-atomic-counter-time-bomb">The Atomic Counter Time Bomb</h3>
+<p>The mega-fused kernel uses an atomic counter to coordinate which block performs the final attention reduction. The counter is initialized to zero once and never reset. Because the counter is shared across all 28 layers, each decode step adds 448 (16 per chunk-block &times; 28 layers sharing the same counter). After ~4.79 million forward passes — approximately <strong>1.9 hours</strong> of continuous generation at 700 tok/s — the signed int32 counter overflows. The modulo check that triggers reduction breaks, and attention output becomes stale.</p>
+<p>While this isn't a concern for benchmarks, this is a real problem for any long-running deployment.</p>
+<p><strong>Fix:</strong> Use a bitmask instead of modulo: <code>(old_count + 1) &amp; (NUM_CHUNKS - 1) == 0</code>. Works correctly for all uint32 values when NUM_CHUNKS is a power of 2 (it's 16).</p>
+
+      <h2 id="5-what-this-teach-us-about-ai-as-a-kernel-author">5. What This Teach Us About AI as a Kernel Author</h2>
+
+      <h3 id="the-generalization-gap">The Generalization Gap</h3>
+<p>Every optimization is hardwired to Qwen3-0.6B at batch size 1. Here's what breaks if you change the model:</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Assumption</th>
+<th>What breaks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>hidden_size = 1024</code></td>
+<td>All fused GEMV kernels crash with <code>AssertionError</code> for any larger model</td>
+</tr>
+<tr>
+<td><code>max_seq_len &le; 2048</code></td>
+<td>Split-K attention silently produces wrong output</td>
+</tr>
+<tr>
+<td><code>batch_size = 1</code></td>
+<td>All fusions fall back to unoptimized standard path</td>
+</tr>
+<tr>
+<td><code>activation = silu</code></td>
+<td>Fused decode path is skipped (harmless fallback)</td>
+</tr>
+<tr>
+<td><code>hidden_size % 128 = 0</code></td>
+<td>INT4 quantization crashes</td>
+</tr>
+<tr>
+<td>Triton GEMV thresholds</td>
+<td>Tuned for Qwen3-0.6B matrix sizes; may regress on other models</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>This is by design: the experiment explicitly allowed model-specific optimization. But it highlights a key limitation of the current approach: <strong>the agent optimizes for the scenario it can measure, not the scenario you'll deploy.</strong></p>
+
+      <h3 id="the-dead-code-problem">The Dead Code Problem</h3>
+<p>About 1,200 lines (a third of the new code) are dead. The persistent forward kernel, an ambitious attempt to run the entire 28-layer forward pass in a single cooperative-groups kernel, was abandoned after achieving only 75 tok/s vs 840 baseline. The agent disabled it with a comment but never deleted the code. Three progressively-fused versions of the QKNorm kernel exist because each trial added a new file rather than extending the previous one. An 88-line <code>fused_gemv_silu.py</code> is completely unreachable in the current code path.</p>
+<p>This is what iterative AI development looks like without a cleanup phase: <strong>geological layers of abandoned experiments, each preserved in the codebase.</strong> For a research prototype, it's fine. For a production merge, it's a cleanup burden that should be explicitly scheduled as a refactoring step.</p>
+
+      <h3 id="micro-benchmarks-sometimes-lie">Micro-Benchmarks Sometimes Lie</h3>
+<div class="figure-wrap">
+<img alt="Diagram showing micro-benchmark vs end-to-end discrepancies" src="figures/post-1-kernel/microbench_lie.svg">
+</div>
+<p>Even though each trial starts with a profiling phase, but sometimes evidence found through custom-written micro-benchmarks do not lead to final end-to-end improvement. </p>
+<blockquote>
+<p><strong>Trial 8</strong>: BLOCK_N=8 for fused INT8 kernels showed <strong>17% faster</strong> in isolated micro-benchmarks. End-to-end result: <strong>-3% regression</strong> (937 vs 965 tok/s).
+</p>
+<p><strong>Trial 3</strong>: <code>num_warps=1</code> for GEMV showed <strong>4.3% faster</strong> in 28-layer micro-benchmark. End-to-end: within noise.
+</p>
+<p><strong>Trial 3</strong>: FlashAttention-3 was <strong>11-15% faster</strong> than FA2 in attention micro-benchmark. End-to-end: within noise.
+</p>
+</blockquote>
+<p>Why? Inside a CUDA graph, kernels share L2 cache, compete for memory bandwidth, and have different scheduling patterns than when run in isolation. An optimization that helps one kernel in isolation can hurt the system by changing cache pressure on adjacent kernels.</p>
+<aside>
+&#x1F4A1;
+
+<strong>Never trust micro-benchmarks alone:</strong> Always validate with end-to-end benchmarks. The agent in later trials would run micro-benchmarks for hypothesis generation, then immediately test end-to-end before committing.
+
+</aside>
+    </div>
+  </div>
+</article>
+
+<!-- ── Footer ── -->
+<footer class="site-footer">
+  <div class="footer-inner">
+    <ul class="footer-links">
+      <li><a href="/self-evolving-inference-system/">Home</a></li>
+      <li><a href="/self-evolving-inference-system/post-1-evolve.html">Post 1: Evolution</a></li>
+      <li><a href="https://github.com/smth-fun/self-evolving-inference-system">GitHub</a></li>
+    </ul>
+    <p class="footer-credit">Part of the <a href="/self-evolving-inference-system/">Self-Evolving Inference System</a> project.</p>
+  </div>
+</footer>
+
+<!-- ── TOC Script ── -->
+<script>
+(function() {
+  const toc = document.getElementById('toc');
+  if (!toc) return;
+  const headings = document.querySelectorAll('.article-body h2');
+  if (headings.length === 0) return;
+
+  let html = '<h4>On this page</h4>';
+  headings.forEach(function(h) {
+    html += '<a href="#' + h.id + '">' + h.textContent + '</a>';
+  });
+  toc.innerHTML = html;
+
+  const links = toc.querySelectorAll('a');
+  const observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        links.forEach(function(l) { l.classList.remove('active'); });
+        const active = toc.querySelector('a[href="#' + entry.target.id + '"]');
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-80px 0px -70% 0px', threshold: 0 });
+
+  headings.forEach(function(h) { observer.observe(h); });
+})();
+</script>
+
+</body>
+</html>

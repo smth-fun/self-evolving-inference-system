@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Optimizing Mini-Sglang Inference as an Evolution Problem</title>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c1221;
+    --bg-surface: #111827;
+    --bg-card: #151d2e;
+    --fg: #e2e8f0;
+    --fg-muted: #94a3b8;
+    --fg-dim: #64748b;
+    --accent: #38bdf8;
+    --accent-glow: rgba(56, 189, 248, 0.15);
+    --accent-border: rgba(56, 189, 248, 0.25);
+    --accent-2: #f59e0b;
+    --border: rgba(148, 163, 184, 0.12);
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+    --font-heading: 'Space Grotesk', system-ui, sans-serif;
+    --font-body: 'Inter', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+    --content-w: 720px;
+    --wide-w: 960px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.8;
+    font-size: 18px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Sticky Nav ── */
+  .topnav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(12, 18, 33, 0.82);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+  }
+  .topnav-inner {
+    max-width: 1060px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+  }
+  .topnav-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    text-decoration: none;
+    color: var(--fg);
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 0.95rem;
+    letter-spacing: -0.01em;
+  }
+  .topnav-brand img {
+    height: 28px;
+    width: auto;
+  }
+  .topnav-links {
+    display: flex;
+    align-items: center;
+    gap: 1.75rem;
+    list-style: none;
+  }
+  .topnav-links a {
+    color: var(--fg-muted);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+  .topnav-links a:hover { color: var(--accent); }
+
+  /* ── Article Layout ── */
+  .article-wrapper {
+    max-width: var(--content-w);
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  .article-header {
+    padding-top: 3.5rem;
+    padding-bottom: 2rem;
+  }
+
+  .article-header h1 {
+    font-family: var(--font-heading);
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.2;
+    letter-spacing: -0.03em;
+    margin-bottom: 1.75rem;
+  }
+
+  /* ── Summary Card ── */
+  .summary-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.75rem 2rem;
+    margin-bottom: 1.5rem;
+  }
+  .summary-card p {
+    color: var(--fg-muted);
+    font-size: 1.05rem;
+    line-height: 1.75;
+    margin: 0;
+  }
+
+  /* ── Key Number Chips ── */
+  .key-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-bottom: 2.5rem;
+  }
+  .key-chip {
+    display: inline-block;
+    padding: 0.3rem 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--fg-muted);
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    white-space: nowrap;
+  }
+  .key-chip--accent {
+    color: var(--accent);
+    border-color: var(--accent-border);
+    background: var(--accent-glow);
+  }
+
+  /* ── Article Body ── */
+  .article-body {
+    padding-bottom: 4rem;
+  }
+
+  .article-body h2 {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #fff;
+    margin-top: 3.5rem;
+    margin-bottom: 1rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+    letter-spacing: -0.02em;
+  }
+
+  .article-body h3 {
+    font-family: var(--font-heading);
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin-top: 2.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .article-body p {
+    margin-bottom: 1.25rem;
+  }
+
+  .article-body strong {
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .article-body a {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: rgba(56, 189, 248, 0.4);
+    transition: text-decoration-color 0.2s, color 0.2s;
+  }
+  .article-body a:hover {
+    color: #7dd3fc;
+    text-decoration-color: var(--accent);
+  }
+
+  .article-body em {
+    font-style: italic;
+  }
+
+  /* ── Inline Code ── */
+  .article-body code {
+    background: rgba(56, 189, 248, 0.08);
+    color: #7dd3fc;
+    border: 1px solid rgba(56, 189, 248, 0.15);
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    padding: 0.15em 0.45em;
+    border-radius: 5px;
+  }
+
+  /* ── Code Blocks ── */
+  .wide-element {
+    max-width: var(--wide-w);
+    margin-left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% + 240px);
+  }
+
+  .article-body pre {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    border-radius: 10px;
+    overflow-x: auto;
+    margin: 1.5rem 0;
+    max-width: var(--wide-w);
+    margin-left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+  }
+  .article-body pre code {
+    background: none;
+    color: #c9d1d9;
+    border: none;
+    padding: 0;
+    font-size: 0.85em;
+    line-height: 1.65;
+    font-family: var(--font-mono);
+  }
+
+  /* ── Blockquotes ── */
+  .article-body blockquote {
+    background: rgba(56, 189, 248, 0.05);
+    border-left: 3px solid var(--accent);
+    padding: 1.25rem 1.5rem;
+    border-radius: 0 8px 8px 0;
+    margin: 1.5rem 0;
+    max-width: var(--wide-w);
+    margin-left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+  }
+  .article-body blockquote p {
+    color: var(--fg-muted);
+    margin-bottom: 0;
+  }
+
+  /* ── Images / Figures ── */
+  .article-body .figure-wrap {
+    max-width: var(--wide-w);
+    margin: 2rem auto;
+    margin-left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+  }
+  .article-body .figure-wrap img {
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    display: block;
+  }
+  .article-body img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 10px;
+    margin: 1.5rem 0;
+    display: block;
+  }
+
+  /* ── Lists ── */
+  .article-body ul,
+  .article-body ol {
+    margin: 0.75rem 0 1.5rem 1.5rem;
+    color: var(--fg);
+  }
+  .article-body li {
+    margin-bottom: 0.5rem;
+    line-height: 1.75;
+  }
+  .article-body li::marker {
+    color: var(--fg-dim);
+  }
+
+  /* ── Tables ── */
+  .table-wrap {
+    max-width: var(--wide-w);
+    margin: 1.5rem auto;
+    margin-left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .article-body table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92em;
+  }
+  .article-body th {
+    background: var(--bg-surface);
+    font-weight: 600;
+    color: #fff;
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .article-body td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .article-body tr:nth-child(even) td {
+    background: rgba(148, 163, 184, 0.04);
+  }
+  .article-body tr:last-child td {
+    border-bottom: none;
+  }
+
+  /* ── Aside / Callout ── */
+  .article-body aside {
+    background: var(--bg-surface);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 1.25rem 1.5rem;
+    margin: 1.5rem 0;
+    max-width: var(--wide-w);
+    margin-left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    color: var(--fg-muted);
+    font-size: 0.95rem;
+    line-height: 1.7;
+  }
+  .article-body aside strong {
+    color: #fff;
+  }
+
+  /* ── HR ── */
+  .article-body hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2.5rem 0;
+  }
+
+  /* ── Sticky TOC (desktop) ── */
+  .toc-sidebar {
+    position: fixed;
+    left: max(1.5rem, calc((100vw - var(--wide-w)) / 2 - 260px));
+    top: 80px;
+    width: 220px;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    z-index: 50;
+  }
+  .toc-sidebar h4 {
+    font-family: var(--font-heading);
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--fg-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.75rem;
+  }
+  .toc-sidebar a {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--fg-dim);
+    text-decoration: none;
+    padding: 0.3rem 0;
+    padding-left: 0.75rem;
+    border-left: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+    line-height: 1.45;
+  }
+  .toc-sidebar a:hover {
+    color: var(--fg-muted);
+  }
+  .toc-sidebar a.active {
+    color: var(--accent);
+    border-left-color: var(--accent);
+  }
+  @media (max-width: 1300px) {
+    .toc-sidebar { display: none; }
+  }
+
+  /* ── Footer ── */
+  .site-footer {
+    border-top: 1px solid var(--border);
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+  }
+  .footer-inner {
+    max-width: 1060px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+  .footer-credit {
+    font-size: 0.875rem;
+    color: var(--fg-dim);
+    max-width: 560px;
+    line-height: 1.65;
+  }
+  .footer-credit a {
+    color: var(--fg-muted);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .footer-credit a:hover { color: var(--accent); }
+  .footer-links {
+    display: flex;
+    gap: 1.5rem;
+    list-style: none;
+  }
+  .footer-links a {
+    color: var(--fg-dim);
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+  .footer-links a:hover { color: var(--accent); }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    body { font-size: 16px; }
+    .article-header h1 { font-size: 1.75rem; }
+    .article-body h2 { font-size: 1.3rem; }
+    .article-body h3 { font-size: 1.1rem; }
+    .article-body pre,
+    .article-body blockquote,
+    .article-body aside,
+    .article-body .figure-wrap,
+    .table-wrap {
+      max-width: 100%;
+      width: 100%;
+      margin-left: 0;
+      transform: none;
+    }
+    .summary-card { padding: 1.25rem; }
+    .topnav-brand span { display: none; }
+    .topnav-links { gap: 1rem; }
+    .topnav-links a { font-size: 0.8rem; }
+    .article-header { padding-top: 2.5rem; }
+  }
+  @media (max-width: 480px) {
+    .article-header h1 { font-size: 1.5rem; }
+    .key-chips { gap: 0.4rem; }
+    .key-chip { font-size: 0.7rem; padding: 0.25rem 0.6rem; }
+    .topnav-links { gap: 0.75rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Sticky Nav ── -->
+<header class="topnav">
+  <div class="topnav-inner">
+    <a href="/self-evolving-inference-system/" class="topnav-brand">
+      <img src="figures/logo-icon.png" alt="">
+      <span>Self-Evolving Inference System</span>
+    </a>
+    <nav>
+      <ul class="topnav-links">
+        <li><a href="/self-evolving-inference-system/">Home</a></li>
+        <li><a href="/self-evolving-inference-system/post-2-kernel.html">Post 2</a></li>
+        <li><a href="https://github.com/smth-fun/self-evolving-inference-system">GitHub</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<!-- ── TOC Sidebar ── -->
+<nav class="toc-sidebar" id="toc"></nav>
+
+<!-- ── Article ── -->
+<article>
+  <div class="article-wrapper">
+    <header class="article-header">
+      <h1>Optimizing Mini-Sglang Inference as an Evolution Problem</h1>
+
+      <div class="summary-card">
+        <p>We ran Claude Code in 10 sequential sessions to optimize Qwen 0.6B inference with mini-sglang on an NVIDIA RTX PRO 6000 Blackwell GPU, achieving 512 &rarr; 1016 tok/s (+98%). Each session read the prior session's notes, profiled the system, and decided what to try next &mdash; without human guidance. This post is not about the kernels. It's about the process: how we designed a minimal scaffold that let an agent evolve, and what emerged from it.</p>
+      </div>
+
+      <div class="key-chips">
+        <span class="key-chip">10 Trials</span>
+        <span class="key-chip key-chip--accent">512 &rarr; 1,016 tok/s</span>
+        <span class="key-chip key-chip--accent">+98% Throughput</span>
+        <span class="key-chip">No Human Intervention</span>
+      </div>
+    </header>
+
+    <div class="article-body">
+      <h2 id="introduction">Introduction</h2>
+<p>A growing body of work has shown that LLM agents can write code, fix bugs, and pass benchmarks. But most evaluations are one-shot: give the agent a task, measure whether it succeeds, and move on. We were curious about something different: what happens when you let an agent <em>iterate</em>? Not once, but repeatedly: reading its own prior work, diagnosing what failed, deciding what to try next. Does it converge? Does it plateau? Does it discover things a human wouldn't?</p>
+<p>To find out, we designed a minimal scaffold for agentic evolution. The task: optimize LLM inference throughput for Qwen3-0.6B on an NVIDIA RTX PRO 6000 Blackwell GPU. We ran it for 10 trials. The result: throughput nearly doubled, and the optimization trajectory revealed patterns e.g. punctuated equilibria, asymmetric failure memory, emergent risk aversion that we did not design for or expect.</p>
+<p>This post examines the <em>mechanism</em>: how we built the scaffold, what behaviors emerged from it, and what structure the trials formed across iterations. We save the kernel-level engineering details for a companion post.</p>
+
+      <h2 id="scaffolding-design">Scaffolding Design</h2>
+<p>The entire system has four components. That's it.</p>
+<p><strong>Fresh sessions.</strong> Each trial is a new Claude Code session with full access to the codebase. The agent can modify the inference engine freely, but cannot touch the benchmark script. This removes a class of shortcuts. i.e. the agent cannot inflate numbers by changing the measurement. Combined with a strict correctness constraint (output tokens must be identical under greedy decoding), this ensures that every throughput gain is real.</p>
+<p><strong>A single scalar signal.</strong> The only feedback the agent receives is the throughput number: tokens per second. No partial credit, no component-level metrics (unless the agent decides to profile on its own), no human commentary. This is deliberately sparse and we wanted to see whether the agent could generate its own richer feedback through profiling and analysis, rather than relying on a hand-designed reward signal.</p>
+<p><strong>A shared <code>learning.md</code> file.</strong> This is the agent's only memory between sessions. Each trial reads it at startup and appends its findings at the end. Over 10 trials, it grew into a structured knowledge base, and its internal organization emerged from the agent's own choices.</p>
+
+      <h3 id="the-anatomy-of-learningmd">The Anatomy of learning.md</h3>
+<p>We did not prescribe a format for <code>learning.md</code>. The agent converged on a structure organically within the first two trials:</p>
+<ul>
+<li><strong>What Worked</strong> — successful optimizations with measured gains</li>
+<li><strong>What Didn't Work</strong> — failed attempts with brief explanations of why</li>
+<li><strong>Key Insights</strong> — conceptual takeaways (e.g., "small-matrix GEMV is hardware-limited at 35% bandwidth utilization")</li>
+<li><strong>Suggestions for Next Trial</strong> — concrete directions for the next session to explore</li>
+<li><strong>Do NOT Try</strong> — a growing blacklist of approaches that have been conclusively eliminated</li>
+</ul>
+<p>This structure is worth examining. The agent independently invented a knowledge management system that separates <em>facts</em> (what happened) from <em>interpretations</em> (why it happened) from <em>prescriptions</em> (what to do next) from <em>prohibitions</em> (what to never do again). The prohibitions turned out to be the most reliable section. We'll return to this.</p>
+<p>The "Do NOT Try" list grew from 5 items after trial 3 to 13 items by trial 10. This accumulating negative knowledge progressively narrowed the search space, and was more reliably heeded than positive suggestions. In a sense, the agent's most durable learning was about what <em>not</em> to do.</p>
+
+      <h3 id="why-this-design-works">Why This Design Works</h3>
+<p>The scaffold is minimal by design. There is no multi-agent framework, no evolutionary search over populations, no learned reward model, no orchestrator selecting among candidates. Just one agent, one file of notes, and a throughput number to beat.</p>
+<p>This minimalism matters because it makes the results interpretable. Every behavior we observe — risk aversion, explore-exploit transitions, paradigm shifts — emerged from the interaction between four simple components. If we had used a complex framework, we could not distinguish emergent behaviors from framework artifacts.</p>
+
+      <h2 id="the-topology-of-trials">The Topology of Trials</h2>
+<p>The 10 trials did not form a linear sequence of independent improvements. They formed a structured graph with dependencies, synergies, and path-dependent effects.</p>
+
+      <h3 id="three-phases">Three Phases</h3>
+<div class="figure-wrap">
+<img alt="Throughput evolution across 10 trials" src="figures/post-2-evolve/image.png">
+</div>
+<p>The optimization trajectory divides into three phases, each driven by fundamentally different sources of improvement:</p>
+<p><strong>Phase 1: Kernel Fusion (512 &rarr; 676 tok/s, +32%).</strong> Trials 1–3 fused operations to reduce kernel launch overhead and improve memory bandwidth utilization. The gains came from reading the same data fewer times.</p>
+<p><strong>Phase 2: Quantization (676 &rarr; 860 tok/s, +27%).</strong> After trial 4 established the bf16 bandwidth wall, trial 5 introduced INT8 quantization, cutting weight traffic from 983 MB to ~490 MB per step. The gains came from reading <em>less</em> data per step which is a qualitative shift from improving read efficiency to reducing read volume.</p>
+<p><strong>Phase 3: System-Level (860 &rarr; 1016 tok/s, +18%).</strong> With weight bandwidth no longer the dominant bottleneck, non-weight overhead (kernel transitions ~20%, attention ~15%) became the target. Trials 6–10 applied graph-level and scheduling-level optimizations. The gains came from restructuring the computation graph itself.</p>
+<p>Each phase transition required the agent to recognize that the previous optimization dimension was exhausted and to identify a new one. The overall trajectory looks less like gradient descent and more like evolution: long plateaus punctuated by sudden jumps when a new optimization paradigm is discovered.</p>
+
+      <h3 id="compound-effects-and-synergies">Compound Effects and Synergies</h3>
+<p>Optimizations across trials interacted in non-obvious ways.</p>
+<p><strong>Amplification.</strong> Trial 9 combined multi-step graph execution with fused norm. Multi-step graph reduced 128 decode iterations to 32 CPU round-trips; fused norm reduced the per-step kernel count. Together, the kernel savings from fused norm were <em>multiplied 4x</em> by the multi-step graph. The combined gain (+5.3%) was substantially larger than the sum of individual contributions (+1.7% + 0.5%). The agent explicitly noted this "synergistic effect" in its results.</p>
+<p><strong>Bottleneck shifting.</strong> Trial 5's INT8 quantization reduced weight traffic by 50%, which had an unexpected second-order effect: attention's share of total step time rose from ~10% to ~19%. This made trial 7's attention fusion (which eliminated 56 kernel launches) proportionally more impactful. Had trial 7 been done <em>before</em> trial 5, its absolute gain would have been smaller. The ordering of optimizations changed their individual attributions, even though the final result might converge to a similar point.</p>
+
+      <h3 id="reverse-dependencies-and-path-constraints">Reverse Dependencies and Path Constraints</h3>
+<p>Some early decisions constrained or enabled later possibilities in ways the agent could not have anticipated.</p>
+<p>Trial 1 established a fused norm+GEMV architecture where each block redundantly computes the norm. This was a good design choice at the time. But when trial 8 tried to fit INT4 dequantization into this same architecture, it hit register overflow. A different fusion architecture from trial 1 might have left space for INT4 to work. The early decision foreclosed a later path.</p>
+<p>Conversely, trial 8's argmax-in-graph optimization (which moved sampling into the CUDA graph) was a prerequisite for trial 9's multi-step graph execution. The graph needed argmax captured inside it for multi-step to work. This created a dependency chain that the agent navigated successfully, though not by explicit planning.</p>
+
+      <h3 id="path-dependence">Path Dependence</h3>
+<p>These interactions mean the optimization trajectory is path-dependent. The final throughput might be similar under different orderings, but the intermediate trajectory especially <em>which optimizations appear to contribute how much</em> depends on the order.</p>
+<p>Some optimizations are order-independent: kernel fusion and quantization are orthogonal and could be swapped without changing their individual gains. Others form dependency chains: argmax-in-graph must precede multi-step graph. Still others exhibit ordering-dependent attribution: INT8 before attention fusion makes the latter look larger; the reverse ordering would make INT8's contribution appear even bigger.</p>
+<p>For agentic systems that maintain running notes about "what worked and by how much," this path dependence means that the recorded attributions are partially an artifact of the exploration order, not intrinsic properties of the optimizations. An agent that reasons too strongly from historical attributions might misjudge the importance of future optimizations.</p>
+
+      <h2 id="emergent-behaviors">Emergent Behaviors</h2>
+<p>The most interesting findings are behaviors we did not specify by design. They arose from the scaffold's constraints interacting with the agent's capabilities.</p>
+
+      <h3 id="asymmetric-failure-memory">Asymmetric Failure Memory</h3>
+<p>We tracked whether failed approaches were repeated in later trials. The pattern is stark:</p>
+<div class="figure-wrap">
+<img alt="Failure spectrum showing catastrophic vs silent failures" src="figures/post-2-evolve/failure_spectrum.svg">
+</div>
+<p>Catastrophic failures are never repeated. The -91% cooperative groups attempt in trial 6 permanently eliminated that direction — the agent never revisited it. The -33% fused reduce and -18% grid sync atomics were similarly one-and-done.</p>
+<p>But silent failures — approaches that produced results "within noise" — were retried repeatedly. <code>num_warps</code> tuning was attempted five times across different trials. <code>BLOCK_N</code> tuning was tried three times. CPU/scheduling optimizations were attempted seven times. Each time, the agent reasoned that perhaps the conditions had changed enough to make the approach work.</p>
+<p>This is not entirely irrational. In one case, <code>num_warps=1</code> <em>did</em> produce a +3.4% gain for QK norm but showed no effect on GEMV — demonstrating that conclusions are genuinely context-dependent. But in practice, the agent spent significant effort re-exploring dead ends that produced ambiguous signals, while never wasting a single trial on a direction that had failed dramatically.</p>
+<p>The mechanism behind this is straightforward: a -91% regression produces an unambiguous "never do this" signal. A "within noise" result produces an ambiguous "maybe the conditions were wrong" signal. The <code>learning.md</code> file captured both outcomes faithfully, but only the dramatic failures generated entries strong enough to prevent revisitation.</p>
+<p><strong>Implication for scaffold design:</strong> if you want an agent to learn efficiently from failure, you may need to engineer stronger signals for inconclusive results — perhaps by requiring the agent to explicitly classify "within noise" attempts as closed investigations rather than open questions.</p>
+
+      <h3 id="risk-aversion-after-catastrophe">Risk Aversion After Catastrophe</h3>
+<p>Before trial 6, the agent's plans were ambitious: "persistent mega-kernel for the entire forward pass," "cooperative groups to eliminate kernel transitions." These were high-risk, high-potential-reward strategies.</p>
+<p>Trial 6 implemented one of these: 780 lines of CUDA code that rewrote the forward pass using cooperative groups. The result was a -91% throughput regression (75 tok/s vs. 860 baseline). The approach was fundamentally flawed — cooperative groups limited parallelism so badly that GEMV became 11x slower. The potential savings from eliminating kernel transitions (~200 &mu;s) were dwarfed by the costs (700 &mu;s slower GEMV + 130 &mu;s sync overhead).</p>
+<p>After this catastrophe, the agent's behavior visibly changed. Trial 7 chose a low-risk "small kernel fusion" strategy. More tellingly, trial 7 tested its fusion in two stages — first without the reduce operation, then with — rather than building monolithically. This incremental testing pattern was new; earlier trials had built and tested complete implementations in one shot.</p>
+<p>The agent became more conservative not because we told it to, but because the <code>learning.md</code> narrative of trial 6's failure was vivid enough to shift its planning. This mirrors well-documented patterns in human decision-making under uncertainty, but here it emerged from nothing more than a text file and a throughput number.</p>
+
+      <h3 id="profiling-intensity-as-a-function-of-phase">Profiling Intensity as a Function of Phase</h3>
+<p>We observed a U-shaped pattern in the agent's use of profiling:</p>
+<ul>
+<li><strong>Early trials (1–3):</strong> Heavy profiling. Bottlenecks were obvious and measurable. Trial 1 profiled from scratch and found cuBLAS GEMV was using only 17% of memory bandwidth for small matrices, directly leading to custom Triton kernels that achieved 81%.</li>
+<li><strong>Middle trials (4–6):</strong> Lighter profiling, more theoretical reasoning. The agent increasingly relied on calculations and architectural reasoning rather than empirical measurement. This is the phase where both the biggest win (INT8 quantization, +27%) and the biggest loss (cooperative groups, -91%) occurred.</li>
+<li><strong>Late trials (7–10):</strong> Return to profiling, but with a different purpose. Rather than finding bottlenecks, profiling was used to <em>confirm</em> that no major bottlenecks remained — to verify arrival at the optimization frontier.</li>
+</ul>
+<p>The pattern makes sense in retrospect: early profiling identifies low-hanging fruit; middle-phase reasoning explores structural changes where profiling alone doesn't suggest the answer; late-phase profiling validates diminishing returns. But the agent navigated this transition autonomously.</p>
+<p>A key lesson from the middle phase: <strong>successful paradigm shifts had quantitative predictions, while failed ones had qualitative reasoning.</strong> Trial 5's INT8 quantization was preceded by concrete bandwidth calculations showing how much data volume reduction would help. Trial 6's cooperative groups were motivated by the qualitative intuition that "eliminating kernel transitions sounds good" — but without a full cost-benefit calculation, the hidden costs (parallelism loss, sync overhead) were not anticipated.</p>
+
+      <h3 id="the-explore-exploit-transition">The Explore-Exploit Transition</h3>
+<p>The agent's trajectory shows a clear shift from exploration to exploitation, but the transition was not smooth — it was driven by specific diagnostic events.</p>
+<p><strong>Trial 4</strong> tried five optimizations. All failed with zero throughput gain. Yet it was arguably the most important trial in the sequence. By exhaustively attempting micro-optimizations within the bf16 regime, it conclusively established the bandwidth wall: with 983 MB of bf16 weights per step at ~988 GB/s effective bandwidth, the system was at its physical limit. The agent wrote in <code>learning.md</code>: "Without quantization or a fundamentally different approach, ~676 tok/s is near the achievable limit for bf16 inference."</p>
+<p>Trial 5 read this, adopted INT8 quantization, and produced the single largest improvement: +27%. The zero-improvement trial provided the <em>diagnosis</em> that made the breakthrough possible. This is a pattern worth naming: <strong>failure as direction-finding</strong>. Trial 4 eliminated a search space and pointed toward the correct paradigm shift.</p>
+<p>Later, trial 10's seven failed parameter tuning attempts served the same function: they confirmed arrival at the optimization frontier, signaling that the evolution had converged.</p>
+
+      <h2 id="what-we-learned">What We Learned</h2>
+<p><strong>Negative knowledge outlasts positive knowledge.</strong> By trial 10, the agent had 13 confirmed dead ends — and it never repeated a catastrophic failure. But positive suggestions had only ~60-70% directional accuracy, and the specific implementation often needed adjustment. The "Do NOT Try" list was the most reliable section of <code>learning.md</code>. If you're designing inter-session memory for agents, invest in making the prohibition mechanism robust.</p>
+<p><strong>Zero-gain trials can be the most valuable.</strong> Trial 4 produced no throughput improvement but provided the diagnosis that enabled the +27% breakthrough in trial 5. Trial 10's seven failed attempts confirmed convergence. Evaluating agent performance purely on per-trial gains would mischaracterize these as wasted effort.</p>
+<p><strong>Measure first, always.</strong> Every successful paradigm shift was preceded by quantitative analysis — bandwidth calculations, profiling data, theoretical bounds. The one major failure (trial 6, -91%) was the one driven by qualitative intuition without a full cost-benefit analysis. This isn't a lesson about conservatism; trial 5's INT8 quantization was bold. It's a lesson about the difference between bold-with-evidence and bold-without-evidence.</p>
+<p><strong>The scaffold matters more than the orchestrator.</strong> We achieved a 98% throughput improvement with four components: fresh sessions, a frozen benchmark, a scalar signal, and a shared text file. No multi-agent debate, no population-based search, no learned reward model. The simplicity of the scaffold made every emergent behavior interpretable and every failure diagnosable. Whether more complex scaffolds would do better is an open question — but our result suggests that the floor for minimal scaffolding is higher than one might expect.</p>
+<p><strong>Suggestions for Next Trial had ~60-70% directional accuracy.</strong> The agent's own forward-looking suggestions pointed in roughly the right direction more often than not, but specific implementation strategies often needed adjustment. Notably, "cooperative groups" was suggested twice (by trial 3 and trial 5) and both times led to catastrophic failure — the suggestion mechanism could not self-correct on a dead end until it was actually tried. Persistent bad suggestions in the presence of good prohibitions suggests that the two systems (positive guidance vs. negative constraints) operate with different reliability characteristics.</p>
+<p><strong>The evolution has a natural endpoint.</strong> Trial 10 tried seven parameter tuning variants — all failed. Trial 9 produced a small gain but the agent explicitly acknowledged diminishing returns. The accumulating "Do NOT Try" list narrowed the search space until there was nothing left to explore. This is a feature, not a bug: a well-designed scaffold should let the agent recognize convergence rather than endlessly recycling old ideas. But it also means the scaffold's ceiling is bounded by the agent's ability to conceive of new paradigms. Once the known paradigm space is exhausted, evolution stops.</p>
+    </div>
+  </div>
+</article>
+
+<!-- ── Footer ── -->
+<footer class="site-footer">
+  <div class="footer-inner">
+    <ul class="footer-links">
+      <li><a href="/self-evolving-inference-system/">Home</a></li>
+      <li><a href="/self-evolving-inference-system/post-2-kernel.html">Post 2: GPU Kernels</a></li>
+      <li><a href="https://github.com/smth-fun/self-evolving-inference-system">GitHub</a></li>
+    </ul>
+    <p class="footer-credit">Part of the <a href="/self-evolving-inference-system/">Self-Evolving Inference System</a> project.</p>
+  </div>
+</footer>
+
+<!-- ── TOC Script ── -->
+<script>
+(function() {
+  const toc = document.getElementById('toc');
+  if (!toc) return;
+  const headings = document.querySelectorAll('.article-body h2');
+  if (headings.length === 0) return;
+
+  let html = '<h4>On this page</h4>';
+  headings.forEach(function(h) {
+    html += '<a href="#' + h.id + '">' + h.textContent + '</a>';
+  });
+  toc.innerHTML = html;
+
+  const links = toc.querySelectorAll('a');
+  const observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        links.forEach(function(l) { l.classList.remove('active'); });
+        const active = toc.querySelector('a[href="#' + entry.target.id + '"]');
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-80px 0px -70% 0px', threshold: 0 });
+
+  headings.forEach(function(h) { observer.observe(h); });
+})();
+</script>
+
+</body>
+</html>

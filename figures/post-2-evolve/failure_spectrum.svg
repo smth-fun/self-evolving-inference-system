@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 400" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif">
+  <defs>
+    <linearGradient id="spectrum" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#dc2626"/>
+      <stop offset="50%" style="stop-color:#f59e0b"/>
+      <stop offset="100%" style="stop-color:#94a3b8"/>
+    </linearGradient>
+    <style>
+      .title { font-size: 15px; fill: #1e293b; font-weight: 600; }
+      .subtitle { font-size: 11px; fill: #64748b; }
+      .item-title { font-size: 11px; fill: #1e293b; font-weight: 600; }
+      .item-detail { font-size: 10px; fill: #64748b; }
+      .item-result { font-size: 10.5px; font-weight: 700; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="850" height="400" fill="#fafbfc" rx="8"/>
+
+  <!-- Title -->
+  <text x="425" y="30" text-anchor="middle" class="title">The Failure Spectrum: What Gets Remembered?</text>
+  <text x="425" y="48" text-anchor="middle" class="subtitle">Catastrophic failures are never repeated. Silent failures get tried again and again.</text>
+
+  <!-- Spectrum bar -->
+  <rect x="100" y="75" width="650" height="16" rx="8" fill="url(#spectrum)"/>
+
+  <!-- Spectrum labels -->
+  <text x="100" y="108" font-size="11" fill="#dc2626" font-weight="600">CATASTROPHIC</text>
+  <text x="750" y="108" text-anchor="end" font-size="11" fill="#94a3b8" font-weight="600">SILENT (within noise)</text>
+
+  <!-- Left side: Catastrophic failures -->
+  <!-- Item 1: Cooperative groups -->
+  <g transform="translate(100, 128)">
+    <rect x="0" y="0" width="230" height="62" rx="6" fill="#fef2f2" stroke="#fecaca" stroke-width="1"/>
+    <circle cx="210" cy="14" r="10" fill="#dc2626"/>
+    <text x="210" y="18" text-anchor="middle" fill="white" font-size="9" font-weight="700">-91%</text>
+    <text x="12" y="18" class="item-title">Cooperative Groups (Trial 6)</text>
+    <text x="12" y="33" class="item-detail">Rewrote entire forward pass in CUDA C++</text>
+    <text x="12" y="48" class="item-detail">75 tok/s vs 860 baseline — 11.5x slower</text>
+    <text x="12" y="58" class="item-result" fill="#16a34a">Never repeated &#10003;</text>
+  </g>
+
+  <!-- Item 2: Fused reduce+O-proj -->
+  <g transform="translate(100, 200)">
+    <rect x="0" y="0" width="230" height="52" rx="6" fill="#fef2f2" stroke="#fecaca" stroke-width="1"/>
+    <circle cx="210" cy="14" r="10" fill="#ef4444"/>
+    <text x="210" y="18" text-anchor="middle" fill="white" font-size="9" font-weight="700">-33%</text>
+    <text x="12" y="18" class="item-title">Fused Reduce+O-proj (Trial 4)</text>
+    <text x="12" y="33" class="item-detail">64KB redundant data per block — too large</text>
+    <text x="12" y="48" class="item-result" fill="#16a34a">Never repeated &#10003;</text>
+  </g>
+
+  <!-- Item 3: Grid sync atomics -->
+  <g transform="translate(100, 262)">
+    <rect x="0" y="0" width="230" height="52" rx="6" fill="#fef2f2" stroke="#fecaca" stroke-width="1"/>
+    <circle cx="210" cy="14" r="10" fill="#f87171"/>
+    <text x="210" y="18" text-anchor="middle" fill="white" font-size="9" font-weight="700">-18%</text>
+    <text x="12" y="18" class="item-title">Grid Sync Atomics (Trial 2)</text>
+    <text x="12" y="33" class="item-detail">Spin-wait overhead killed latency</text>
+    <text x="12" y="48" class="item-result" fill="#16a34a">Never repeated &#10003;</text>
+  </g>
+
+  <!-- Arrow in middle -->
+  <line x1="355" y1="210" x2="490" y2="210" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="6,4"/>
+  <polygon points="490,204 506,210 490,216" fill="#cbd5e1"/>
+  <text x="425" y="200" text-anchor="middle" font-size="10" fill="#94a3b8" font-weight="600">DECREASING SIGNAL</text>
+
+  <!-- Right side: Silent failures -->
+  <!-- Item 4: num_warps tuning -->
+  <g transform="translate(520, 128)">
+    <rect x="0" y="0" width="230" height="62" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <circle cx="210" cy="14" r="10" fill="#94a3b8"/>
+    <text x="210" y="18" text-anchor="middle" fill="white" font-size="9" font-weight="700">~0%</text>
+    <text x="12" y="18" class="item-title">num_warps Tuning</text>
+    <text x="12" y="33" class="item-detail">Always "within noise" — no clear signal</text>
+    <text x="12" y="48" class="item-detail">Tried in trials 1, 2, 3, 4, and 10</text>
+    <text x="12" y="58" class="item-result" fill="#dc2626">Repeated 5 times &#10007;</text>
+  </g>
+
+  <!-- Item 5: BLOCK_N tuning -->
+  <g transform="translate(520, 200)">
+    <rect x="0" y="0" width="230" height="52" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <circle cx="210" cy="14" r="10" fill="#94a3b8"/>
+    <text x="210" y="18" text-anchor="middle" fill="white" font-size="9" font-weight="700">~0%</text>
+    <text x="12" y="18" class="item-title">BLOCK_N Tuning</text>
+    <text x="12" y="33" class="item-detail">Trials 5, 8, 10 — micro said yes, e2e said no</text>
+    <text x="12" y="48" class="item-result" fill="#dc2626">Repeated 3 times &#10007;</text>
+  </g>
+
+  <!-- Item 6: CPU optimization -->
+  <g transform="translate(520, 262)">
+    <rect x="0" y="0" width="230" height="52" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <circle cx="210" cy="14" r="10" fill="#94a3b8"/>
+    <text x="210" y="18" text-anchor="middle" fill="white" font-size="9" font-weight="700">0%</text>
+    <text x="12" y="18" class="item-title">CPU/Scheduling Optimization</text>
+    <text x="12" y="33" class="item-detail">System was GPU-bound, never helped</text>
+    <text x="12" y="48" class="item-result" fill="#dc2626">Tried 7 times across trials &#10007;</text>
+  </g>
+
+  <!-- Bottom insight — light box style matching other figures -->
+  <rect x="85" y="330" width="680" height="55" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="105" y="352" font-size="12" fill="#1e293b" font-weight="600">Spectacular failures teach better than quiet ones.</text>
+  <text x="105" y="372" font-size="10.5" fill="#475569">-91% is tried once. ~0% gets tried 5+ times because "maybe next time" feels reasonable.</text>
+</svg>

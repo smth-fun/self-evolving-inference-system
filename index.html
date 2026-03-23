@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Self-Evolving Inference System</title>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c1221;
+    --bg-surface: #111827;
+    --bg-card: #151d2e;
+    --fg: #e2e8f0;
+    --fg-muted: #94a3b8;
+    --fg-dim: #64748b;
+    --accent: #38bdf8;
+    --accent-glow: rgba(56, 189, 248, 0.15);
+    --accent-border: rgba(56, 189, 248, 0.25);
+    --accent-2: #f59e0b;
+    --border: rgba(148, 163, 184, 0.12);
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+    --font-heading: 'Space Grotesk', system-ui, sans-serif;
+    --font-body: 'Inter', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+    --max-w: 1060px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.7;
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Sticky Nav ── */
+  .topnav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(12, 18, 33, 0.82);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+  }
+  .topnav-inner {
+    max-width: var(--max-w);
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+  }
+  .topnav-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    text-decoration: none;
+    color: var(--fg);
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 0.95rem;
+    letter-spacing: -0.01em;
+  }
+  .topnav-brand img {
+    height: 28px;
+    width: auto;
+  }
+  .topnav-links {
+    display: flex;
+    align-items: center;
+    gap: 1.75rem;
+    list-style: none;
+  }
+  .topnav-links a {
+    color: var(--fg-muted);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+  .topnav-links a:hover { color: var(--accent); }
+
+  /* ── Hero ── */
+  .hero {
+    position: relative;
+    text-align: center;
+    padding: 4.5rem 1.5rem 4rem;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -40%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 800px;
+    height: 800px;
+    background: radial-gradient(circle, rgba(56, 189, 248, 0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap; border: 0;
+  }
+  .hero-logo {
+    max-width: 420px;
+    width: 100%;
+    height: auto;
+    margin-bottom: 1.75rem;
+    position: relative;
+  }
+  .hero-headline {
+    font-family: var(--font-heading);
+    font-size: 2.75rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    margin-bottom: 1.25rem;
+    color: #fff;
+    position: relative;
+  }
+  .hero-sub {
+    font-size: 1.1rem;
+    color: var(--fg-muted);
+    max-width: 640px;
+    margin: 0 auto 2.25rem;
+    line-height: 1.75;
+    position: relative;
+  }
+
+  /* ── CTA Buttons ── */
+  .cta-row {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+    flex-wrap: wrap;
+    position: relative;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.5rem;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 0.925rem;
+    text-decoration: none;
+    transition: all 0.2s;
+    cursor: pointer;
+    border: none;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--bg);
+  }
+  .btn-primary:hover {
+    background: #67d4fc;
+    box-shadow: 0 0 24px rgba(56, 189, 248, 0.3);
+  }
+  .btn-secondary {
+    background: transparent;
+    color: var(--fg);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover {
+    border-color: var(--accent-border);
+    color: var(--accent);
+  }
+  .btn svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+  }
+
+  /* ── Metric Chips ── */
+  .chips {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    position: relative;
+  }
+  .chip {
+    display: inline-block;
+    padding: 0.35rem 0.85rem;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--fg-muted);
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    white-space: nowrap;
+  }
+  .chip--accent {
+    color: var(--accent);
+    border-color: var(--accent-border);
+    background: var(--accent-glow);
+  }
+
+  /* ── Sections ── */
+  .section {
+    max-width: var(--max-w);
+    margin: 0 auto;
+    padding: 4rem 1.5rem;
+  }
+  .section-label {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.5rem;
+  }
+  .section-title {
+    font-family: var(--font-heading);
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 1rem;
+    letter-spacing: -0.02em;
+  }
+  .section-desc {
+    color: var(--fg-muted);
+    max-width: 600px;
+    margin-bottom: 2rem;
+    font-size: 0.95rem;
+  }
+
+  /* ── Results Section ── */
+  .results-section {
+    border-top: 1px solid var(--border);
+  }
+  .chart-wrapper {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 2rem;
+    box-shadow: var(--shadow);
+  }
+  .chart-wrapper img {
+    width: 100%;
+    height: auto;
+    border-radius: var(--radius-sm);
+    display: block;
+  }
+  .chart-caption {
+    font-size: 0.85rem;
+    color: var(--fg-dim);
+    text-align: center;
+    margin-top: 1rem;
+    font-style: italic;
+  }
+
+  /* ── Phases (inline under chart) ── */
+  .phases-bar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    margin-top: 1.5rem;
+    background: var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+  .phase-item {
+    background: var(--bg-surface);
+    padding: 1.25rem 1.5rem;
+  }
+  .phase-item:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+  .phase-item:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+  .phase-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-bottom: 0.4rem;
+  }
+  .phase-name {
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #fff;
+  }
+  .phase-stat {
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .phase-trials {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--fg-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.5rem;
+  }
+  .phase-item p {
+    font-size: 0.82rem;
+    color: var(--fg-muted);
+    line-height: 1.55;
+  }
+
+  /* ── Blog Posts ── */
+  .posts-section {
+    border-top: 1px solid var(--border);
+  }
+  .posts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+  .post-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 2rem;
+    text-decoration: none;
+    color: var(--fg);
+    transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
+    cursor: pointer;
+  }
+  .post-card:hover {
+    border-color: var(--accent-border);
+    box-shadow: 0 0 32px var(--accent-glow);
+    transform: translateY(-2px);
+  }
+  .post-card--featured {
+    border-color: var(--accent-border);
+  }
+  .post-label {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--fg-dim);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .post-label svg {
+    width: 14px;
+    height: 14px;
+    fill: var(--fg-dim);
+    flex-shrink: 0;
+  }
+  .post-tags {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+  .post-tag {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.2rem 0.6rem;
+    border-radius: 100px;
+    background: var(--accent-glow);
+    color: var(--accent);
+    border: 1px solid var(--accent-border);
+  }
+  .post-tag--orange {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--accent-2);
+    border-color: rgba(245, 158, 11, 0.25);
+  }
+  .post-card h3 {
+    font-family: var(--font-heading);
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 0.75rem;
+    line-height: 1.35;
+  }
+  .post-card .post-desc {
+    font-size: 0.9rem;
+    color: var(--fg-muted);
+    line-height: 1.65;
+    flex: 1;
+  }
+  .post-card .read-link {
+    font-family: var(--font-heading);
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin-top: 1.5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: gap 0.2s;
+  }
+  .post-card:hover .read-link {
+    gap: 0.65rem;
+  }
+
+  /* ── Footer ── */
+  .site-footer {
+    border-top: 1px solid var(--border);
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+  }
+  .footer-inner {
+    max-width: var(--max-w);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+  .footer-credit {
+    font-size: 0.875rem;
+    color: var(--fg-dim);
+    max-width: 560px;
+    line-height: 1.65;
+  }
+  .footer-credit a {
+    color: var(--fg-muted);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .footer-credit a:hover { color: var(--accent); }
+  .footer-links {
+    display: flex;
+    gap: 1.5rem;
+    list-style: none;
+  }
+  .footer-links a {
+    color: var(--fg-dim);
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+  .footer-links a:hover { color: var(--accent); }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .hero { padding: 3rem 1.25rem 3rem; }
+    .hero-logo { max-width: 280px; }
+    .hero-headline { font-size: 1.85rem; }
+    .hero-sub { font-size: 1rem; }
+    .phases-bar { grid-template-columns: 1fr; }
+    .phase-item:first-child { border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
+    .phase-item:last-child { border-radius: 0 0 var(--radius-sm) var(--radius-sm); }
+    .posts-grid { grid-template-columns: 1fr; }
+    .topnav-brand span { display: none; }
+    .topnav-links { gap: 1rem; }
+    .topnav-links a { font-size: 0.8rem; }
+    .section { padding: 3rem 1.25rem; }
+    .chart-wrapper { padding: 1.25rem; }
+  }
+
+  @media (max-width: 480px) {
+    .hero-headline { font-size: 1.5rem; }
+    .cta-row { flex-direction: column; align-items: center; }
+    .btn { width: 100%; max-width: 280px; justify-content: center; }
+    .topnav-links { gap: 0.75rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Sticky Nav ── -->
+<header class="topnav">
+  <div class="topnav-inner">
+    <a href="/self-evolving-inference-system/" class="topnav-brand">
+      <img src="figures/logo-icon.png" alt="">
+      <span>Self-Evolving Inference System</span>
+    </a>
+    <nav>
+      <ul class="topnav-links">
+        <li><a href="#results">Results</a></li>
+        <li><a href="#posts">Posts</a></li>
+        <li><a href="https://github.com/smth-fun/self-evolving-inference-system">GitHub</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<!-- ── Hero ── -->
+<section class="hero">
+  <h1 class="sr-only">Self-Evolving Inference System</h1>
+  <img class="hero-logo" src="figures/logo-cropped.png" alt="Self-Evolving Inference System">
+  <p class="hero-headline">$100 of Claude doubles throughput</p>
+  <p class="hero-sub">A minimal scaffold that lets an AI agent iteratively optimize an LLM inference engine. Over 10 trials, Claude evolved mini-sglang from 512 to 1,016 tok/s (+98%) on Qwen3-0.6B / RTX PRO 6000 Blackwell.</p>
+
+  <div class="cta-row">
+    <a class="btn btn-primary" href="#posts">Read the Posts</a>
+    <a class="btn btn-secondary" href="https://github.com/smth-fun/self-evolving-inference-system">
+      <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      View on GitHub
+    </a>
+  </div>
+
+  <div class="chips">
+    <span class="chip">10 Trials</span>
+    <span class="chip chip--accent">+98% Throughput</span>
+    <span class="chip">512 &rarr; 1,016 tok/s</span>
+    <span class="chip">Qwen3-0.6B</span>
+    <span class="chip">RTX PRO 6000 Blackwell</span>
+    <span class="chip">No human intervention</span>
+  </div>
+</section>
+
+<!-- ── Results + Phases ── -->
+<section id="results" class="section results-section">
+  <p class="section-label">Results</p>
+  <h2 class="section-title">Throughput over 10 sequential trials</h2>
+  <p class="section-desc">Each trial reads the prior session's notes, profiles the system, and decides what to try next &mdash; without human guidance.</p>
+  <div class="chart-wrapper">
+    <img src="figures/post-2-evolve/image.png" alt="Throughput evolution across 10 trials, from 512 to 1,016 tok/s">
+    <p class="chart-caption">Decode throughput (tok/s) measured after each trial on Qwen3-0.6B / RTX PRO 6000 Blackwell.</p>
+  </div>
+
+  <div class="phases-bar">
+    <div class="phase-item">
+      <p class="phase-trials">Trials 1&ndash;3</p>
+      <div class="phase-header">
+        <span class="phase-name">Kernel Fusion</span>
+        <span class="phase-stat">+32%</span>
+      </div>
+      <p>Fused RMSNorm+GEMV, QKNorm+RoPE+KV, and split-K attention to cut kernel launch overhead.</p>
+    </div>
+    <div class="phase-item">
+      <p class="phase-trials">Trials 4&ndash;6</p>
+      <div class="phase-header">
+        <span class="phase-name">Quantization</span>
+        <span class="phase-stat">+27%</span>
+      </div>
+      <p>INT8 weight quantization halved weight traffic from 983 MB to ~490 MB per step.</p>
+    </div>
+    <div class="phase-item">
+      <p class="phase-trials">Trials 7&ndash;10</p>
+      <div class="phase-header">
+        <span class="phase-name">System-Level</span>
+        <span class="phase-stat">+18%</span>
+      </div>
+      <p>Multi-step CUDA graphs, in-graph argmax, and metadata pre-allocation.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── Blog Posts ── -->
+<section id="posts" class="section posts-section">
+  <p class="section-label">Blog Posts</p>
+  <h2 class="section-title">Read the full story</h2>
+  <div class="posts-grid">
+    <a class="post-card post-card--featured" href="/self-evolving-inference-system/post-1-evolve.html">
+      <p class="post-label">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+        Post 1 &middot; The Process
+      </p>
+      <div class="post-tags">
+        <span class="post-tag">Evolution Scaffold</span>
+        <span class="post-tag">Emergent Behaviors</span>
+      </div>
+      <h3>LLM Inference as an Evolution Problem</h3>
+      <p class="post-desc">The scaffold design, the emergent behaviors, and what 10 trials of autonomous optimization revealed about agentic iteration.</p>
+      <span class="read-link">Read post &rarr;</span>
+    </a>
+    <a class="post-card" href="/self-evolving-inference-system/post-2-kernel.html">
+      <p class="post-label">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+        Post 2 &middot; The Kernels
+      </p>
+      <div class="post-tags">
+        <span class="post-tag post-tag--orange">GPU Kernels</span>
+        <span class="post-tag post-tag--orange">Triton / CUDA</span>
+      </div>
+      <h3>When AI Agents Write GPU Kernels</h3>
+      <p class="post-desc">A deep dive into 3,700 lines of Triton and CUDA: the fused megakernels, the subtle bugs, and the surprises.</p>
+      <span class="read-link">Read post &rarr;</span>
+    </a>
+  </div>
+</section>
+
+<!-- ── Footer ── -->
+<footer class="site-footer">
+  <div class="footer-inner">
+    <p class="footer-credit">This project was inspired by Andrej Karpathy's <a href="https://github.com/karpathy/autoresearch">autoresearch</a>, which demonstrated the potential of letting AI agents autonomously drive research and optimization loops.</p>
+    <ul class="footer-links">
+      <li><a href="https://github.com/smth-fun/self-evolving-inference-system">GitHub</a></li>
+      <li><a href="/self-evolving-inference-system/post-1-evolve.html">Post 1</a></li>
+      <li><a href="/self-evolving-inference-system/post-2-kernel.html">Post 2</a></li>
+    </ul>
+  </div>
+</footer>
+
+</body>
+</html>
