@@ -12,20 +12,18 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0c1221;
-    --bg-surface: #111827;
-    --bg-card: #151d2e;
-    --fg: #e2e8f0;
-    --fg-muted: #94a3b8;
-    --fg-dim: #64748b;
-    --accent: #38bdf8;
-    --accent-glow: rgba(56, 189, 248, 0.15);
-    --accent-border: rgba(56, 189, 248, 0.25);
-    --accent-2: #f59e0b;
-    --border: rgba(148, 163, 184, 0.12);
+    --bg: #ffffff;
+    --bg-surface: #f8f9fa;
+    --bg-card: #f8f9fa;
+    --fg: #1a1a2e;
+    --fg-muted: #4a4a6a;
+    --fg-dim: #6b7280;
+    --accent: #2563eb;
+    --accent-light-bg: #eff4ff;
+    --accent-light-text: #1e40af;
+    --border: #e5e7eb;
     --radius: 12px;
     --radius-sm: 8px;
-    --shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
     --font-heading: 'Space Grotesk', system-ui, sans-serif;
     --font-body: 'Inter', system-ui, sans-serif;
     --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
@@ -50,9 +48,7 @@
     position: sticky;
     top: 0;
     z-index: 100;
-    background: rgba(12, 18, 33, 0.82);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background: #ffffff;
     border-bottom: 1px solid var(--border);
   }
   .topnav-inner {
@@ -110,7 +106,7 @@
     font-family: var(--font-heading);
     font-size: 2.2rem;
     font-weight: 700;
-    color: #fff;
+    color: var(--fg);
     line-height: 1.2;
     letter-spacing: -0.03em;
     margin-bottom: 1.75rem;
@@ -151,9 +147,9 @@
     white-space: nowrap;
   }
   .key-chip--accent {
-    color: var(--accent);
-    border-color: var(--accent-border);
-    background: var(--accent-glow);
+    color: var(--accent-light-text);
+    border-color: var(--border);
+    background: var(--accent-light-bg);
   }
 
   /* ── Article Body ── */
@@ -165,7 +161,7 @@
     font-family: var(--font-heading);
     font-size: 1.5rem;
     font-weight: 600;
-    color: #fff;
+    color: var(--fg);
     margin-top: 3.5rem;
     margin-bottom: 1rem;
     padding-top: 2rem;
@@ -187,7 +183,7 @@
   }
 
   .article-body strong {
-    color: #fff;
+    color: var(--fg);
     font-weight: 600;
   }
 
@@ -195,11 +191,11 @@
     color: var(--accent);
     text-decoration: underline;
     text-underline-offset: 3px;
-    text-decoration-color: rgba(56, 189, 248, 0.4);
+    text-decoration-color: rgba(37, 99, 235, 0.35);
     transition: text-decoration-color 0.2s, color 0.2s;
   }
   .article-body a:hover {
-    color: #7dd3fc;
+    color: #1d4ed8;
     text-decoration-color: var(--accent);
   }
 
@@ -209,9 +205,9 @@
 
   /* ── Inline Code ── */
   .article-body code {
-    background: rgba(56, 189, 248, 0.08);
-    color: #7dd3fc;
-    border: 1px solid rgba(56, 189, 248, 0.15);
+    background: #f0f1f3;
+    color: #1e3a5f;
+    border: 1px solid var(--border);
     font-family: var(--font-mono);
     font-size: 0.88em;
     padding: 0.15em 0.45em;
@@ -227,7 +223,7 @@
   }
 
   .article-body pre {
-    background: #0d1117;
+    background: #f6f8fa;
     border: 1px solid var(--border);
     padding: 1.5rem;
     border-radius: 10px;
@@ -240,7 +236,7 @@
   }
   .article-body pre code {
     background: none;
-    color: #c9d1d9;
+    color: #24292f;
     border: none;
     padding: 0;
     font-size: 0.85em;
@@ -250,8 +246,8 @@
 
   /* ── Blockquotes ── */
   .article-body blockquote {
-    background: rgba(56, 189, 248, 0.05);
-    border-left: 3px solid var(--accent);
+    background: #f0f4f8;
+    border-left: 3px solid #94a3b8;
     padding: 1.25rem 1.5rem;
     border-radius: 0 8px 8px 0;
     margin: 1.5rem 0;
@@ -321,7 +317,7 @@
   .article-body th {
     background: var(--bg-surface);
     font-weight: 600;
-    color: #fff;
+    color: var(--fg);
     padding: 0.75rem 1rem;
     text-align: left;
     border-bottom: 1px solid var(--border);
@@ -331,7 +327,7 @@
     border-bottom: 1px solid var(--border);
   }
   .article-body tr:nth-child(even) td {
-    background: rgba(148, 163, 184, 0.04);
+    background: #fafbfc;
   }
   .article-body tr:last-child td {
     border-bottom: none;
@@ -353,7 +349,7 @@
     line-height: 1.7;
   }
   .article-body aside strong {
-    color: #fff;
+    color: var(--fg);
   }
 
   /* ── HR ── */
