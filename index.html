@@ -504,6 +504,10 @@
       GitHub
     </a>
   </div>
+
+  <div style="max-width: 800px; margin: 2.5rem auto 0; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border);">
+    <img src="assets/output.gif" alt="Side-by-side demo: vanilla vs evolve inference speed" style="width: 100%; display: block;">
+  </div>
 </section>
 
 <!-- ── Iteration 1: Results first ── -->
@@ -512,23 +516,10 @@
   <h2 class="section-title">Throughput doubled. Quality preserved.</h2>
   <p class="section-desc" style="max-width: 720px;">We gave Claude a single task: make this inference engine faster. Over 10 sequential sessions with no human intervention, it evolved <a href="https://github.com/smth-fun/mini-sglang" style="color: var(--accent);">mini-sglang</a> from 512 to 1,016 tok/s (+98%) on Qwen3-0.6B / RTX PRO 6000 Blackwell &mdash; writing 3,700 lines of Triton and CUDA, fusing kernels, introducing INT8/INT4 quantization, and redesigning the attention mechanism. After fixing all implementation bugs, the evolved engine matches vanilla within noise on IFEval, GSM8K, and MMLU Pro.</p>
 
-  <div style="max-width: 800px; margin: 2rem auto; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border);">
-    <img src="assets/output.gif" alt="Side-by-side demo: vanilla vs evolve inference speed" style="width: 100%; display: block;">
-  </div>
-
   <div class="chart-wrapper" style="margin-top: 2rem;">
     <img src="assets/figures/post-2-evolve/image.png" alt="Throughput evolution across 10 trials, from 512 to 1,016 tok/s">
     <p class="chart-caption">Decode throughput (tok/s) measured after each trial on Qwen3-0.6B / RTX PRO 6000 Blackwell.</p>
   </div>
-
-  <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--fg-dim);">View the evolved code on the <a href="https://github.com/smth-fun/mini-sglang/tree/trial-10" style="color: var(--accent);"><code>trial-10</code></a> branch of our <a href="https://github.com/smth-fun/mini-sglang" style="color: var(--accent);">mini-sglang fork</a>.</p>
-</section>
-
-<!-- ── The Scaffold ── -->
-<section id="scaffold" class="section results-section">
-  <p class="section-label">The Scaffold</p>
-  <h2 class="section-title">Three components. That's it.</h2>
-  <p class="section-desc" style="max-width: 720px;">Fresh sessions, a single scalar signal (tok/s), and a shared <code>learning.md</code> file. No multi-agent framework, no orchestrator, no learned reward model. The agent reads its own prior notes, profiles the system, decides what to try, and writes back what it learned.</p>
 
   <div class="phases-bar">
     <div class="phase-item">
@@ -556,6 +547,15 @@
       <p>Multi-step CUDA graphs, in-graph argmax, and metadata pre-allocation.</p>
     </div>
   </div>
+
+  <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--fg-dim);">View the evolved code on the <a href="https://github.com/smth-fun/mini-sglang/tree/trial-10" style="color: var(--accent);"><code>trial-10</code></a> branch of our <a href="https://github.com/smth-fun/mini-sglang" style="color: var(--accent);">mini-sglang fork</a>.</p>
+</section>
+
+<!-- ── The Scaffold ── -->
+<section id="scaffold" class="section results-section">
+  <p class="section-label">The Scaffold</p>
+  <h2 class="section-title">Three components. That's it.</h2>
+  <p class="section-desc" style="max-width: 720px;">Fresh sessions, a single scalar signal (tok/s), and a shared <code>learning.md</code> file. No multi-agent framework, no orchestrator, no learned reward model. The agent reads its own prior notes, profiles the system, decides what to try, and writes back what it learned.</p>
 
   <p style="margin-top: 1.5rem;"><a class="btn btn-secondary" href="/self-evolving-inference-system/post-1-evolve.html" style="display: inline-flex;">Read the full scaffold analysis &rarr;</a></p>
 </section>
