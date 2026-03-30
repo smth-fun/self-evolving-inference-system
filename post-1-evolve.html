@@ -515,6 +515,12 @@
     </header>
 
     <div class="article-body">
+
+      <!-- Eye-catching demo -->
+      <div class="figure-wrap" style="margin-bottom: 2.5rem;">
+        <img src="assets/output.gif" alt="Side-by-side demo: vanilla vs evolve inference speed" style="width: 100%; border-radius: 10px; border: 1px solid var(--border);">
+      </div>
+
       <h2 id="introduction">Introduction</h2>
 <p>A growing body of work has shown that LLM agents can write code, fix bugs, and pass benchmarks. But most evaluations are one-shot: give the agent a task, measure whether it succeeds, and move on. We were curious about something different: what happens when you let an agent <em>iterate</em>? Not once, but repeatedly: reading its own prior work, diagnosing what failed, deciding what to try next. Does it converge? Does it plateau? Does it discover things a human wouldn't?</p>
 <p>To find out, we designed a minimal scaffold for agentic evolution. The task: optimize LLM inference throughput for Qwen3-0.6B on an NVIDIA RTX PRO 6000 Blackwell GPU. We ran it for 10 trials. The result: throughput nearly doubled, and the optimization trajectory revealed patterns e.g. punctuated equilibria, asymmetric failure memory, emergent risk aversion that we did not design for or expect.</p>
@@ -613,6 +619,34 @@
 <p><strong>The scaffold matters more than the orchestrator.</strong> We achieved a 98% throughput improvement with three components: fresh sessions, a scalar signal, and a shared text file. No multi-agent debate, no population-based search, no learned reward model. The simplicity of the scaffold made every emergent behavior interpretable and every failure diagnosable. Whether more complex scaffolds would do better is an open question — but our result suggests that the floor for minimal scaffolding is higher than one might expect.</p>
 <p><strong>Suggestions for Next Trial had ~60-70% directional accuracy.</strong> The agent's own forward-looking suggestions pointed in roughly the right direction more often than not, but specific implementation strategies often needed adjustment. Notably, "cooperative groups" was suggested twice (by trial 3 and trial 5) and both times led to catastrophic failure — the suggestion mechanism could not self-correct on a dead end until it was actually tried. Persistent bad suggestions in the presence of good prohibitions suggests that the two systems (positive guidance vs. negative constraints) operate with different reliability characteristics.</p>
 <p><strong>The evolution has a natural endpoint.</strong> Trial 10 tried seven parameter tuning variants — all failed. Trial 9 produced a small gain but the agent explicitly acknowledged diminishing returns. The accumulating "Do NOT Try" list narrowed the search space until there was nothing left to explore. This is a feature, not a bug: a well-designed scaffold should let the agent recognize convergence rather than endlessly recycling old ideas. But it also means the scaffold's ceiling is bounded by the agent's ability to conceive of new paradigms. Once the known paradigm space is exhausted, evolution stops.</p>
+
+      <h2 id="benchmark-results">Benchmark Results</h2>
+<p>We evaluated the evolved engine against vanilla on three standard benchmarks (IFEval, GSM8K, MMLU Pro) using <strong>lm-eval</strong> with greedy decoding. To isolate the effect of the fused kernels from quantization, we tested three configurations:</p>
+<ul>
+<li><strong>A. Vanilla</strong> &mdash; baseline engine, no optimizations</li>
+<li><strong>B. Evolve (no quant)</strong> &mdash; fused Triton kernels + split-K attention, FP16 weights</li>
+<li><strong>C. Evolve (with quant)</strong> &mdash; full evolved engine with INT8+INT4 quantization</li>
+</ul>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Dataset</th><th>Metric</th><th>A. Vanilla</th><th>B. Evolve (no quant)</th><th>C. Evolve (quant)</th></tr>
+</thead>
+<tbody>
+<tr><td>IFEval</td><td>prompt_level_strict_acc</td><td>0.3253 &plusmn; 0.0202</td><td>0.3198 &plusmn; 0.0201</td><td>0.3216 &plusmn; 0.0201</td></tr>
+<tr><td>GSM8K</td><td>flexible-extract</td><td>0.6490 &plusmn; 0.0131</td><td>0.6384 &plusmn; 0.0132</td><td>0.5777 &plusmn; 0.0136</td></tr>
+<tr><td>MMLU Pro</td><td>exact_match</td><td>0.2957 &plusmn; 0.0167</td><td>0.2929 &plusmn; 0.0165</td><td>0.2800 &plusmn; 0.0165</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><strong>Fused kernels are correct.</strong> Evolve without quantization (B) matches vanilla (A) within standard error on all three benchmarks (&lt;1.1pp gap). The fused Triton kernels, split-K attention, multi-step CUDA graph decode, and all other structural optimizations introduce no meaningful accuracy loss.</p>
+<p><strong>Quantization is the only source of quality cost.</strong> The B&rarr;C gap (6.1pp on GSM8K, 1.3pp on MMLU Pro) is the price of INT8+INT4 quantization on a 0.6B parameter model. This is an inherent precision trade-off, not an implementation bug. Larger models are less affected &mdash; MMLU Pro's shorter reasoning chains already show a much smaller gap than GSM8K's multi-step math.</p>
+
+<aside>
+<strong>Note:</strong> These results were obtained after fixing three bugs discovered during evaluation (see <a href="/self-evolving-inference-system/post-2-kernel.html#4-what-the-agent-got-wrong">Post 2: What the Agent Got Wrong</a>). The original evolved engine had an ~8pp IFEval regression (detokenizer bug) and a ~16pp GSM8K regression (2048-token attention cliff + quantization). Fixing the implementation bugs isolated quantization as the sole remaining quality cost.
+</aside>
     </div>
   </div>
 </article>

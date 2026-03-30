@@ -575,7 +575,7 @@
         <span class="key-chip">3,700 Lines</span>
         <span class="key-chip">26 Files Changed</span>
         <span class="key-chip key-chip--accent">8 Optimizations</span>
-        <span class="key-chip">3 Bugs Found</span>
+        <span class="key-chip">5 Bugs Found</span>
         <span class="key-chip">~1,200 Dead Lines</span>
       </div>
     </header>
@@ -964,7 +964,22 @@ def _reduce_attn_kernel(
 <p>The split-K attention kernel hardcodes <code>_NUM_CHUNKS_PAD = 16</code> and <code>_BLOCK_SEQ = 128</code>, meaning it can attend to at most 128 &times; 16 = 2,048 tokens. If the sequence is longer, chunks beyond index 15 are simply never computed. No assertion. No error. No warning. The kernel just silently ignores those tokens and produces wrong attention outputs.</p>
 <p>The benchmark happens to stay under this limit (short prompts + 128 output tokens), so the agent never encountered the bug during its optimization loop. But <code>max_seq_len</code> is set to 4,096. Any real workload generating more than ~1,000 output tokens would hit this wall.</p>
 <p>This is the canonical example of <strong>reward hacking through benchmarks</strong>: the agent optimized for the benchmark it could measure, and the benchmark didn't test the edge case. The optimization is "correct" on the benchmark and silently broken in production.</p>
-<p><strong>Fix:</strong> Make <code>_NUM_CHUNKS_PAD</code> dynamic, derived from <code>max_seq_len</code> at initialization.</p>
+<p><strong>Impact:</strong> On GSM8K (5-shot, ~1,123 token prompts), output quality degrades into repetitive garbage once total sequence length crosses 2,048 &mdash; a cliff at roughly output token 925. This caused a ~9pp regression on GSM8K flexible-extract. The bug was initially misattributed to <code>fused_add_rmsnorm_gemv_int8</code> because kernel isolation tests that appeared "fixed" had simply not generated enough tokens to cross the threshold (natural EOS at 588/705 tokens). Only by forcing generation past 2,048 with <code>ignore_eos=True</code> was the true root cause identified.</p>
+<p><strong>Fix applied:</strong> Changed <code>_NUM_CHUNKS_PAD</code> from 16 to 32 in both <code>splitk_attention.py</code> and <code>fused_qknorm_attn.py</code>, extending the limit to 4,096 tokens to match <code>max_seq_len_override</code>. GSM8K flexible-extract recovered from 0.4867 to 0.5777 (+9.1pp). A proper fix would compute the constant dynamically from <code>max_seq_len</code>.</p>
+
+      <h3 id="detokenizer-multi-step-bug">Detokenizer Multi-Step Stuttering</h3>
+<p>The multi-step CUDA graph decode (4 steps per iteration) sends 4 <code>DetokenizeMsg</code> with the same uid in one batch to the detokenizer process. The detokenizer's two-pass design assumes each uid appears once per batch, which breaks in two ways:</p>
+<p><strong>Crash (KeyError):</strong> Pass 2 deletes <code>decode_map[uid]</code> when it encounters <code>finished=True</code>. Any subsequent message with the same uid in the same batch hits a <code>KeyError</code>.</p>
+<p><strong>Stuttering:</strong> Pass 1 appends tokens to <code>decoded_ids</code> but <code>surr_offset</code> / <code>read_offset</code> are only updated in pass 2. With 4 same-uid messages, each message's <code>read_ids</code> snapshots from the beginning, causing <code>batch_decode</code> to output <em>cumulative</em> text instead of <em>incremental</em> deltas:</p>
+<pre><code># Expected (incremental):  ['\n', 'Okay', ',', ' so']
+# Actual (cumulative):     ['\n', '\nOkay', '\nOkay,', '\nOkay, so']</code></pre>
+<p>This produced visible stuttering in online inference (e.g., <code>Okay &rarr; Okay, &rarr; Okay, I need need to...</code>) with outputs 2&ndash;20x longer than expected, causing an ~8&ndash;9pp regression on IFEval. The bug only affects online mode (server); offline <code>LLM.generate()</code> accumulates token IDs and decodes once at the end, bypassing the detokenizer entirely.</p>
+<p><strong>Fix:</strong> Detect duplicate uids in the batch and fall back to one-at-a-time processing. Split <code>detokenize()</code> into an entry point (with duplicate detection) and <code>_detokenize_batch()</code> (original two-pass logic). The unique-uid fast path is completely unchanged. Performance impact is negligible &mdash; multi-step batches have at most 4 messages.</p>
+
+      <h3 id="non-streaming-api-bug">Non-Streaming API Response</h3>
+<p>The <code>/v1/chat/completions</code> endpoint unconditionally returned a <code>StreamingResponse</code> (SSE event stream), regardless of the <code>stream</code> field in the request body. Tools like <strong>lm-eval</strong> that send <code>stream=False</code> requests expect a single JSON response. Instead they received an SSE stream, failed to parse it, and reported all scores as zero.</p>
+<p>This bug existed in <strong>both</strong> the vanilla and evolved engines &mdash; it is not a regression from the evolution process, but a pre-existing gap in the serving layer that was exposed when we ran standardized benchmarks for the first time.</p>
+<p><strong>Fix:</strong> Branch on <code>req.stream</code> in the endpoint handler. <code>stream=True</code> uses the existing <code>StreamingResponse</code> path. <code>stream=False</code> collects all incremental tokens via a new <code>collect_chat_completions()</code> method and returns a standard OpenAI-format <code>JSONResponse</code>.</p>
 
       <h3 id="two-race-conditions-in-the-mega-fused-kernel">Two Race Conditions in the Mega-Fused Kernel</h3>
 <p>The agent's most ambitious kernel — <code>fused_qknorm_attn.py</code>, which fuses QKNorm + RoPE + KV Store + Split-K Attention + Reduction into a single launch — contains two race conditions:</p>
